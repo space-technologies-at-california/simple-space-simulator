@@ -9,7 +9,7 @@ class State:
         x, y, z, dx, dy, dz
         Rotations is experssed as theta around n, where n is a unit vector
         """
-        # nativelly contain the state as a cartesian state vector
+        # contains the state as a cartesian state vector
         self.state_vector = np.array([x, y, z, dx, dy, dz])
         self.w = np.array([wx, wy, wz])
         self.q = np.array([qw, qx, qy, qz])
@@ -118,9 +118,19 @@ def state_from_vectors(state, q, w):
     return State(state[0], state[1], state[2], state[3], state[4], state[5], q[0], q[1], q[2], q[3], w[0], w[1], w[2])
 
 
+"""
+TODO Sensor Deivces
+"""
+
+
 class SensorDevice():
     def __init__():
         pass
+
+
+"""
+TODO Control Devices
+"""
 
 
 class ControlDevice():
@@ -137,5 +147,3 @@ class Cubesat:
         self.mass = mass
         self.inertia = inertia
         self.inertia_inv = np.linalg.inv(inertia)
-        sensor_read_delay = 0
-        control_write_delay = 0

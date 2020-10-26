@@ -1,22 +1,32 @@
 import numpy as np
+
 import simple_space_simulator.utils as utils
 import simple_space_simulator.cubesat as cubesat
-
-# constants
-class Consts:
-    G = 6.67430e-11 # m^3/(kg*s^2)
-    M_earth = 5.972e24
-    R_earth = 6.371e6
-    ISS_altitude = 4.08e6
-    ISS_inclination = 0.9005899
-    mu = G * M_earth
-    miles_to_meters = 1609.34
+from simple_space_simulator import constants
 
 
 class Simulator:
+    """
+    This class handles the step by step calculations required to simulate an orbiting body and
+    the interactions with multiple forcers, torquers, and accelerators
+    """
     def __init__(self, cubesat, planet, state, dt=0.1):
         """
-        time and step size in seconds
+        Parameters
+        ----------
+        cubesat : Cubesat
+            The orbiting cubesat object
+        planet : Planet
+            The planet that the cubesat object will be orbiting
+        state : State
+            Initial state of the simulation
+        dt : float, optional
+            The time between steps of the simulation
+
+        Returns
+        -------
+        Simulator
+            A simulator object that can be stepped through and used with a renderer object
         """
         self.dt = dt
         self.cubesat = cubesat
@@ -55,9 +65,13 @@ class Simulator:
                            [0, 0, self.dt]])
 
     def step(self):
-        # compute acceleration vector from gravity assuming points mass of the earth and satelite
-        # [x,y,z]/|[x,y,z]| <- assumes point mass earth with center at (0,0,0)
-
+        """
+        Computes the accelerations for the current time step given state S.
+        Returns
+        -------
+        tuple
+            A  tuple that contains the elapsed time and the new state
+        """
         net_force = np.zeros(3)
         for forcer in self.forces:
             net_force += forcer(self.state, self.cubesat, self.planet)
@@ -85,7 +99,7 @@ class Simulator:
         w_norm = np.linalg.norm(w)
         w_f = w * np.sin(w_norm / 2) / w_norm if w_norm != 0 else [0, 0, 0]
         q = utils.quaternion_multiply(np.array([np.cos(w_norm / 2), w_f[0], w_f[1], w_f[2]]),
-                                self.state.get_orientation_quaternion())
+                                      self.state.get_orientation_quaternion())
         q /= np.linalg.norm(q)
 
         # A*state + B*acceleration
@@ -105,18 +119,14 @@ class Simulator:
 
     def add_angular_accelerator(self, angular_accelerator):
         self.angular_accelerations.append(angular_accelerator)
-        
-    
+
+
 class Planet:
     def __init__(self, mass, radius):
-        """
-        mass in kg
-        radius in m
-        """
-        self.radius = radius
-        self.mass = mass
-    
+        self.radius = radius  # m
+        self.mass = mass  # kg
+
     def get_gravitational_acceleration(self, state):
-        r_hat = state.state_vector[:3]/np.linalg.norm(state.state_vector[:3])
-        a = -Consts.G * self.mass / np.linalg.norm(state.state_vector[:3])**2 * r_hat
+        r_hat = state.state_vector[:3] / np.linalg.norm(state.state_vector[:3])
+        a = -constants.G * self.mass / np.linalg.norm(state.state_vector[:3]) ** 2 * r_hat
         return a
