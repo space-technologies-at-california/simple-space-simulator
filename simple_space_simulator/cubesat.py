@@ -39,12 +39,11 @@ class State:
         theta = np.arctan2(self.get_y(), self.get_x())  # latitude
         phi = np.arccos(self.get_z() / r)  # longitude
 
-        ############### WRONG ################
-        dr = 2 * (self.get_x() * self.get_dx() + self.get_y() * self.get_dy() + self.get_z() * self.get_dz()) / r
-        dtheta = 1 / (1 + (self.get_y() / self.get_x()) ** 2) * (
-                self.get_dy() / self.get_x() - self.get_dx() / self.get_x() ** 2)
-        dphi = -1 / (np.sqrt(1 - (self.get_z() / r) ** 2)) * (self.get_dz() / r - self.get_z() * dr / r ** 2)
-        ############### WRONG ################
+        ############### RIGHT? ################
+        dr = (self.get_x()*self.get_dx() + self.get_y()*self.get_dy() + self.get_z()*self.get_dz()) / np.sqrt(self.get_x()*self.get_x()+self.get_y()*self.get_y()+self.get_z()*self.get_z())
+        dtheta = (self.get_x()*self.get_dy()-self.get_y()*self.get_dx()) / (self.get_x()*self.get_x() + self.get_y()*self.get_y())
+        dphi = (self.get_z()*dr - r*self.get_dz()) / (r**2 * np.sqrt(1 - self.get_z()**2 / r**2))
+        ############### RIGHT? ################
         return np.array([r, theta, phi, dr, dtheta, dphi])
 
     # Getter methods for cartesian coordinates
