@@ -39,11 +39,10 @@ class State:
         theta = np.arctan2(self.get_y(), self.get_x())  # latitude
         phi = np.arccos(self.get_z() / r)  # longitude
 
-        ############### RIGHT? ################
-        dr = (self.get_x()*self.get_dx() + self.get_y()*self.get_dy() + self.get_z()*self.get_dz()) / np.sqrt(self.get_x()*self.get_x()+self.get_y()*self.get_y()+self.get_z()*self.get_z())
-        dtheta = (self.get_x()*self.get_dy()-self.get_y()*self.get_dx()) / (self.get_x()*self.get_x() + self.get_y()*self.get_y())
-        dphi = (self.get_z()*dr - r*self.get_dz()) / (r**2 * np.sqrt(1 - self.get_z()**2 / r**2))
-        ############### RIGHT? ################
+        dr = (self.get_x()*self.get_dx() + self.get_y()*self.get_dy() + self.get_z()*self.get_dz()) / r
+        dtheta = (self.get_x()*self.get_dy()-self.get_y()*self.get_dx()) / (self.get_x()**2 + self.get_y()**2)
+        dphi = (self.get_z()*dr - r*self.get_dz()) / (r**2 * np.sqrt(1 - (self.get_z() / r)**2))
+
         return np.array([r, theta, phi, dr, dtheta, dphi])
 
     # Getter methods for cartesian coordinates
@@ -122,8 +121,8 @@ TODO Sensor Deivces
 """
 
 
-class SensorDevice():
-    def __init__():
+class SensorDevice:
+    def __init__(self):
         pass
 
 
@@ -132,8 +131,8 @@ TODO Control Devices
 """
 
 
-class ControlDevice():
-    def __init__():
+class ControlDevice:
+    def __init__(self):
         pass
 
 

@@ -14,7 +14,7 @@ def circular_orbit_velocity(altitude, mass=constants.M_EARTH, radius=constants.R
 
     Parameters
     ----------
-    altitude : str
+    altitude : float
         The distance above the ground that the object is positioned
     mass : float, optional
         Mass of the body being orbited (default is the mass of earth)
@@ -35,7 +35,7 @@ def inclination_to_cartesian_velocity(speed, inclination):
 
     Parameters
     ----------
-    speed : str
+    speed : float
         The positive speed in m/s at which the satellite will be orbiting
     inclination : float
         The angle of inclination in radians from horizontal that the satellite will orbit along
