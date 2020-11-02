@@ -8,6 +8,8 @@ class Renderer:
         self.plots = []
 
     def run(self, simulator, stop_condition):
+        self.states.append(simulator.state)
+        self.time_stamps.append(0)
         while not stop_condition(self.states, self.time_stamps):
             time, state = simulator.step()
             self.states.append(state)
