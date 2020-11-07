@@ -11,6 +11,7 @@ class SimPlot(ABC):
     """
     Parent class for all simple space simulator plot subclasses
     """
+
     def __init__(self):
         self.is_3d = False
 
@@ -23,6 +24,7 @@ class CartesianPlot(SimPlot):
     """
     This plot plots the position in x, y, z in meters in ECEF along time in seconds
     """
+
     def build(self, states, time_stamps, ax):
         x = [state.get_x() for state in states]
         y = [state.get_y() for state in states]
@@ -42,6 +44,7 @@ class CartesianVelocityPlot(SimPlot):
     """
     This plot plots the velocity in the x, y, z in m/s in ECEF along time in seconds
     """
+
     def build(self, states, time_stamps, ax):
         dx = [state.get_dx() for state in states]
         dy = [state.get_dy() for state in states]
@@ -61,6 +64,7 @@ class SphericalPlot(SimPlot):
     """
     This plot plots r, lat, lon in meters and radians along time in seconds
     """
+
     def build(self, states, time_stamps, ax):
         r = [state.get_r() for state in states]
         lon = [state.get_lon() for state in states]
@@ -76,7 +80,7 @@ class SphericalPlot(SimPlot):
         lns3 = ax2.plot(time_stamps, r, color="red", label='radius')
 
         lns = lns1 + lns2 + lns3
-        labels = [l.get_label() for l in lns]
+        labels = [ln.get_label() for ln in lns]
         ax.legend(lns, labels, loc='upper center')
 
 
@@ -84,6 +88,7 @@ class SphericalVelocityPlot(SimPlot):
     """
     This plot plots dr, dlat, dlon in m/s and rad/s along time in seconds
     """
+
     def build(self, states, time_stamps, ax):
         r = [state.get_dr() for state in states]
         lon = [state.get_dtheta() for state in states]
@@ -100,7 +105,7 @@ class SphericalVelocityPlot(SimPlot):
         lns3 = ax2.plot(time_stamps, r, color="red", label='dr')
 
         lns = lns1 + lns2 + lns3
-        labels = [l.get_label() for l in lns]
+        labels = [ln.get_label() for ln in lns]
         ax.legend(lns, labels)
 
 
@@ -108,6 +113,7 @@ class OrbitalPlot3D(SimPlot):
     """
     This plot plots the orbit of the satellite in 3D
     """
+
     def __init__(self, planet):
         self.is_3d = True
         self.planet = planet
@@ -143,6 +149,7 @@ class OrbitalPlot2D(SimPlot):
     """
     This plot plots the orbit of the satellite in a 2D plane given by the inclination (default 0)
     """
+
     def __init__(self, planet, inclination=0):
         super().__init__()
         self.planet = planet
@@ -176,6 +183,7 @@ class OrientationPlot(SimPlot):
     """
     This plot plots the orientation of the satellite itself
     """
+
     def build(self, states, time_stamps, ax):
         X, Y, Z = [], [], []
         for state in states:

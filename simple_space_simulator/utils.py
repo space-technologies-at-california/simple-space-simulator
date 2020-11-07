@@ -4,7 +4,7 @@ import math
 from simple_space_simulator import constants
 
 """
-Orbital equations helper functions 
+Orbital equations helper functions
 """
 
 
@@ -47,8 +47,9 @@ def inclination_to_cartesian_velocity(speed, inclination):
     """
     return 0, abs(speed) * np.cos(inclination), abs(speed) * np.sin(inclination)
 
+
 """
-Quaternion helper functions  
+Quaternion helper functions
 """
 
 

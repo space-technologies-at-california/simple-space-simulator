@@ -45,7 +45,7 @@ class State:
 
         return np.array([r, theta, phi, dr, dtheta, dphi])
 
-    # Getter methods for cartesian coordinates
+    """    Getter methods for cartesian coordinates """
     def get_x(self):
         return self.state_vector[0]
 

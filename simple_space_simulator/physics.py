@@ -10,6 +10,7 @@ class Simulator:
     This class handles the step by step calculations required to simulate an orbiting body and
     the interactions with multiple forcers, torquers, and accelerators
     """
+
     def __init__(self, cubesat, planet, state, dt=0.1):
         """
         Parameters

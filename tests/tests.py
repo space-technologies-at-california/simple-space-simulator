@@ -6,7 +6,6 @@ from simple_space_simulator import constants
 import simple_space_simulator.cubesat as cubesat
 import simple_space_simulator.renderer as renderer
 import simple_space_simulator.utils as utils
-import simple_space_simulator.plots as plots
 
 
 class TestSimpleOrbit(unittest.TestCase):
@@ -22,7 +21,8 @@ class TestSimpleOrbit(unittest.TestCase):
         simulator = physics.Simulator(qubesat, planet, state, time_per_step)
         simulator.add_accelerator(
             lambda s, c, p: planet.get_gravitational_acceleration(s))
-        stop_condition = lambda states, times: len(states) >= int(steps_per_orbit)
+
+        def stop_condition(states, times): return len(states) >= int(steps_per_orbit)
         r = renderer.Renderer()
         r.run(simulator, stop_condition)
         return r
