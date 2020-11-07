@@ -15,7 +15,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  - conda env create -f env.yaml
+  - conda create -q -n simple_space_simulator python=3.8 flake8 numpy matplotlib
   - conda activate simple_space_simulator
   - python setup.py install
 
