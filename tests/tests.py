@@ -1,5 +1,4 @@
 import unittest
-import math
 
 import simple_space_simulator.physics as physics
 from simple_space_simulator import constants
@@ -36,8 +35,7 @@ class TestSimpleOrbit(unittest.TestCase):
 
         altitude = constants.ISS_ALTITUDE  # meters
         time_per_step = 0.1  # seconds
-        orbital_period = 2 * math.pi * math.sqrt((altitude + constants.R_EARTH) ** 3 /
-                                                 (constants.G * constants.M_EARTH))
+        orbital_period = utils.steps_per_orbit(altitude, time_per_step)
         steps_per_orbit = orbital_period / time_per_step
 
         r = self.run_simulator_one_orbit(altitude, time_per_step, steps_per_orbit)

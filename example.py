@@ -21,7 +21,7 @@ qw, qx, qy, qz = utils.euler_to_quaternion(0, 0, 0)
 # x, y, z, dx, dy, dz, qw, qx, qy, qz, wx, wy, wz
 state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, vx, vy, vz, qw, qx, qy, qz, 0.001,
                       0.000, 0.000)
-simulator = physics.Simulator(qubesat, planet, state, 1)
+simulator = physics.Simulator(qubesat, planet, state, 0.1)
 
 """
 Step 3: Add all the desired force, torque, and acceleration functions to the simulator
@@ -34,7 +34,7 @@ Step 4: Configure the stop condition for the simulation. Run the simulation with
 
 
 # stop after a specified number of steps
-def stop_condition(states, times): return len(states) > 10000
+def stop_condition(states, times): return len(states) > utils.steps_per_orbit(constants.ISS_ALTITUDE, 0.1)
 
 
 r = renderer.Renderer()

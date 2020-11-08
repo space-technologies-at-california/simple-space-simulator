@@ -48,6 +48,17 @@ def inclination_to_cartesian_velocity(speed, inclination):
     return 0, abs(speed) * np.cos(inclination), abs(speed) * np.sin(inclination)
 
 
+def steps_per_orbit(altitude, time_per_step, radius=constants.R_EARTH):
+    """
+    Returns the number of steps for a complete orbit based on constant speed at constant altitude model
+    :param altitude: The altitude in meters above the center of the earth.
+    :param time_per_step: The amount of time in seconds of each step
+    :param radius: The radius of the body being orbited
+    :return: The number of steps
+    """
+    return int(2 * math.pi * math.sqrt((radius + altitude) ** 3 / (constants.G * constants.M_EARTH)) / time_per_step)
+
+
 """
 Quaternion helper functions
 """
