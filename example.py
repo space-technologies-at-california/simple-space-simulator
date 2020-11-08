@@ -1,4 +1,3 @@
-import math
 
 import simple_space_simulator.physics as physics
 from simple_space_simulator import constants
@@ -16,12 +15,13 @@ planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, rad
 """
 Step 2: Configure the initial state of the cubesat in the simulation
 """
-vx, vy, vz = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(constants.ISS_ALTITUDE), math.pi / 2)
+vx, vy, vz = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(constants.ISS_ALTITUDE),
+                                                     constants.ISS_INCLINATION)
 qw, qx, qy, qz = utils.euler_to_quaternion(0, 0, 0)
 # x, y, z, dx, dy, dz, qw, qx, qy, qz, wx, wy, wz
 state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, vx, vy, vz, qw, qx, qy, qz, 0.001,
                       0.000, 0.000)
-simulator = physics.Simulator(qubesat, planet, state, 0.1)
+simulator = physics.Simulator(qubesat, planet, state, 1)
 
 """
 Step 3: Add all the desired force, torque, and acceleration functions to the simulator
@@ -34,11 +34,26 @@ Step 4: Configure the stop condition for the simulation. Run the simulation with
 
 
 # stop after a specified number of steps
-def stop_condition(states, times): return len(states) > utils.steps_per_orbit(constants.ISS_ALTITUDE, 0.1)
+def stop_condition(states, times): return len(states) > utils.steps_per_orbit(constants.ISS_ALTITUDE, 1)
 
 
 r = renderer.Renderer()
 r.run(simulator, stop_condition)
+
+# import pyIGRF
+# import numpy as np
+# for state in r.states:
+#     # D: declination (+ve east)
+#     # I: inclination (+ve down)
+#     # H: horizontal intensity
+#     # X: north component
+#     # Y: east component
+#     # Z: vertical component (+ve down)
+#     # F: total intensity
+#     # unit: degree or nT
+#     s = pyIGRF.igrf_value(state.get_lat(), state.get_lon(), state.get_r() - constants.R_EARTH, 1999)
+#     magnetic_field_vector = np.array([s[3], s[4], s[5]])
+#     # print(state.ned_to_ecef(magnetic_field_vector))
 
 """
 Step 5: Choose the plots you want to display after running the simulation
@@ -53,7 +68,7 @@ plot4 = plots.SphericalVelocityPlot()
 r.add_plot(plot4)
 plot5 = plots.OrbitalPlot2D(planet, inclination=constants.ISS_INCLINATION)
 r.add_plot(plot5)
-plot6 = plots.OrbitalPlot3D(planet)
+plot6 = plots.OrbitalPlot3D(planet, show_magnetic_field=True, show_planet=False)
 r.add_plot(plot6)
 plot7 = plots.OrientationPlot()
 r.add_plot(plot7)

@@ -5,6 +5,8 @@ import math
 from abc import ABC, abstractmethod
 
 import simple_space_simulator.utils as utils
+import simple_space_simulator.constants as constants
+import pyIGRF
 
 
 class SimPlot(ABC):
@@ -114,27 +116,42 @@ class OrbitalPlot3D(SimPlot):
     This plot plots the orbit of the satellite in 3D
     """
 
-    def __init__(self, planet):
+    def __init__(self, planet, show_planet=False, show_magnetic_field=False):
         self.is_3d = True
         self.planet = planet
+        self.show_planet = show_planet
+        self.show_magnetic_field = show_magnetic_field
 
     def build(self, states, time_stamps, ax):
-        count = 15  # keep 180 points along theta and phi
-        # define a grid matching the map size, subsample along with pixels
-        theta = np.linspace(0, np.pi, count)
-        phi = np.linspace(0, 2 * np.pi, count)
-        theta, phi = np.meshgrid(theta, phi)
-        R = self.planet.radius
-        # sphere
-        x = R * np.sin(theta) * np.cos(phi)
-        y = R * np.sin(theta) * np.sin(phi)
-        z = R * np.cos(theta)
-        ax.plot_surface(x.T, y.T, z.T, cstride=1, rstride=1)  # we've already pruned ourselves
-
         x = [state.get_x() for state in states]
         y = [state.get_y() for state in states]
         z = [state.get_z() for state in states]
         ax.plot3D(x, y, z, 'red')
+
+        if self.show_planet:
+            count = 15  # keep 180 points along theta and phi
+            # define a grid matching the map size, subsample along with pixels
+            theta = np.linspace(0, np.pi, count)
+            phi = np.linspace(0, 2 * np.pi, count)
+            theta, phi = np.meshgrid(theta, phi)
+            R = self.planet.radius
+            # sphere
+            x = R * np.sin(theta) * np.cos(phi)
+            y = R * np.sin(theta) * np.sin(phi)
+            z = R * np.cos(theta)
+            ax.plot_surface(x.T, y.T, z.T, cstride=1, rstride=1)  # we've already pruned ourselves
+
+        if self.show_magnetic_field:
+            for i in range(0, len(states), len(states)//10):
+                state = states[i]
+                s = pyIGRF.igrf_value(state.get_lat(), state.get_lon(), state.get_r() - constants.R_EARTH, 1999)
+                magnetic_field_vector = np.array([s[3], s[4], s[5]])
+                magnetic_field_vector_norm = magnetic_field_vector / np.linalg.norm(magnetic_field_vector)
+                magnetic_field_vector_norm *= 4000000  # size of vector is relative
+                magnetic_field_vector_norm = state.ned_to_ecef(magnetic_field_vector_norm)
+                ax.quiver(state.get_x(), state.get_y(), state.get_z(), magnetic_field_vector_norm[0],
+                          magnetic_field_vector_norm[1], magnetic_field_vector_norm[2], color='green')
+
         ax.set_title("Orbital Plot 3D")
         ax.set_xlabel("x")
         ax.set_ylabel("y")

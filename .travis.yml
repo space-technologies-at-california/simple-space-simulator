@@ -17,6 +17,7 @@ install:
 
   - conda create -q -n simple_space_simulator python=3.8 flake8 numpy matplotlib
   - conda activate simple_space_simulator
+  - pip install pyigrf
   - python setup.py install
 
 script:
