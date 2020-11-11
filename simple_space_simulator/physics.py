@@ -98,12 +98,19 @@ class Simulator:
 
         # https://math.stackexchange.com/questions/39553/how-do-i-apply-an-angular-velocity-vector3-to-a-unit-quaternion-orientation
         w = angular_velocity * self.dt
-        a = 1/2 * net_angular_acc * self.dt ** 2
+
         w_norm = np.linalg.norm(w)
         w_f = w * np.sin(w_norm / 2) / w_norm if w_norm != 0 else [0, 0, 0]
-        q = utils.quaternion_multiply(np.array([np.cos(w_norm / 2), w_f[0], w_f[1], w_f[2]]),
-                                      self.state.get_orientation_quaternion())
-        # q /= np.linalg.norm(q)
+        q = utils.quaternion_multiply(
+            np.array([np.cos(w_norm / 2), w_f[0], w_f[1], w_f[2]]),
+            self.state.get_orientation_quaternion())
+
+        a = 1/2 * net_angular_acc * self.dt ** 2
+        a_norm = np.linalg.norm(a)
+        a_f = a * np.sin(a_norm / 2) / a_norm if a_norm != 0 else [0, 0, 0]
+        q = utils.quaternion_multiply(np.array([np.cos(a_norm / 2), a_f[0], a_f[1], a_f[2]]), q)
+
+        q /= np.linalg.norm(q)
 
         # A*state + B*acceleration
         self.state = cubesat.state_from_vectors(
