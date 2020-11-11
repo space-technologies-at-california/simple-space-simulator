@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import simple_space_simulator.utils as utils
 
 
 class State:
@@ -7,7 +8,7 @@ class State:
         """
         Structure of the state vector (units are m and m/s)
         x, y, z, dx, dy, dz
-        Rotations is experssed as theta around n, where n is a unit vector
+        Rotation is expressed as theta as quaternion q (w, x, y, z)
         """
         # contains the state as a cartesian state vector
         self.state_vector = np.array([x, y, z, dx, dy, dz])
@@ -24,6 +25,9 @@ class State:
     def get_orientation_quaternion(self):
         return self.q
 
+    def get_orientation_quaternion_conjugate(self):
+        return np.array([self.q[0], -self.q[1], -self.q[2], -self.q[3]])
+
     def get_angular_velocity_vector(self):
         return self.w
 
@@ -39,13 +43,14 @@ class State:
         theta = np.arctan2(self.get_y(), self.get_x())  # latitude
         phi = np.arccos(self.get_z() / r)  # longitude
 
-        dr = (self.get_x()*self.get_dx() + self.get_y()*self.get_dy() + self.get_z()*self.get_dz()) / r
-        dtheta = (self.get_x()*self.get_dy()-self.get_y()*self.get_dx()) / (self.get_x()**2 + self.get_y()**2)
-        dphi = (self.get_z()*dr - r*self.get_dz()) / (r**2 * np.sqrt(1 - (self.get_z() / r)**2))
+        dr = (self.get_x() * self.get_dx() + self.get_y() * self.get_dy() + self.get_z() * self.get_dz()) / r
+        dtheta = (self.get_x() * self.get_dy() - self.get_y() * self.get_dx()) / (self.get_x() ** 2 + self.get_y() ** 2)
+        dphi = (self.get_z() * dr - r * self.get_dz()) / (r ** 2 * np.sqrt(1 - (self.get_z() / r) ** 2))
 
         return np.array([r, theta, phi, dr, dtheta, dphi])
 
     """    Getter methods for cartesian coordinates """
+
     def get_x(self):
         return self.state_vector[0]
 
@@ -111,6 +116,9 @@ class State:
                           [-np.cos(lat) * np.cos(lon), -np.cos(lat) * np.sin(lon), -np.sin(lat)]])
         return np.dot(DCMef, vector)
 
+    def get_roll_pitch_yaw(self):
+        return utils.quaternion_to_euler_angle(self.q[0], self.q[1], self.q[2], self.q[3])
+
 
 def state_from_vectors(state, q, w):
     return State(state[0], state[1], state[2], state[3], state[4], state[5], q[0], q[1], q[2], q[3], w[0], w[1], w[2])
@@ -145,3 +153,15 @@ class Cubesat:
         self.mass = mass
         self.inertia = inertia
         self.inertia_inv = np.linalg.inv(inertia)
+
+        self.length = length
+        self.width = width
+        self.height = height
+        self.points = np.array([[-width/2, -length/2, -height/2],
+                                [width/2, -length/2, -height/2],
+                                [width/2, length/2, -height/2],
+                                [-width/2, length/2, -height/2],
+                                [-width/2, -length/2, height/2],
+                                [width/2, -length/2, height/2],
+                                [width/2, length/2, height/2],
+                                [-width/2, length/2, height/2]])

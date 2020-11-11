@@ -1,4 +1,5 @@
 import numpy as np
+import pyIGRF
 
 import simple_space_simulator.utils as utils
 import simple_space_simulator.cubesat as cubesat
@@ -97,11 +98,12 @@ class Simulator:
 
         # https://math.stackexchange.com/questions/39553/how-do-i-apply-an-angular-velocity-vector3-to-a-unit-quaternion-orientation
         w = angular_velocity * self.dt
+        a = 1/2 * net_angular_acc * self.dt ** 2
         w_norm = np.linalg.norm(w)
         w_f = w * np.sin(w_norm / 2) / w_norm if w_norm != 0 else [0, 0, 0]
         q = utils.quaternion_multiply(np.array([np.cos(w_norm / 2), w_f[0], w_f[1], w_f[2]]),
                                       self.state.get_orientation_quaternion())
-        q /= np.linalg.norm(q)
+        # q /= np.linalg.norm(q)
 
         # A*state + B*acceleration
         self.state = cubesat.state_from_vectors(
@@ -123,11 +125,28 @@ class Simulator:
 
 
 class Planet:
-    def __init__(self, mass, radius):
+    def __init__(self, mass, radius, magnetic_field_model=pyIGRF):
         self.radius = radius  # m
         self.mass = mass  # kg
+        self.magnetic_field_model = magnetic_field_model
 
     def get_gravitational_acceleration(self, state):
         r_hat = state.state_vector[:3] / np.linalg.norm(state.state_vector[:3])
         a = -constants.G * self.mass / np.linalg.norm(state.state_vector[:3]) ** 2 * r_hat
         return a
+
+    def get_magnetic_field(self, state, ecef=True):
+        # D: declination (+ve east)
+        # I: inclination (+ve down)
+        # H: horizontal intensity
+        # X: north component
+        # Y: east component
+        # Z: vertical component (+ve down)
+        # F: total intensity
+        # unit: degree or nT
+        s = self.magnetic_field_model.igrf_value(
+            state.get_lat(), state.get_lon(), state.get_r() - constants.R_EARTH, 1999)
+        magnetic_field_vector = np.array([s[3], s[4], s[5]]) / 1e9  # converted to T
+        if ecef:
+            return state.ned_to_ecef(magnetic_field_vector)
+        return state

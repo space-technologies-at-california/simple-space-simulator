@@ -9,7 +9,7 @@ import simple_space_simulator.utils as utils
 """
 Step 1: Define the cubesat and planet specifications
 """
-qubesat = cubesat.Cubesat(1, length=0.1, width=0.1, height=0.1)  # mass in kg, length, width, height in m
+qubesat = cubesat.Cubesat(1, length=0.2, width=0.2, height=0.4)  # mass in kg, length, width, height in m
 planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, radius in meters
 
 """
@@ -19,14 +19,16 @@ vx, vy, vz = utils.inclination_to_cartesian_velocity(utils.circular_orbit_veloci
                                                      constants.ISS_INCLINATION)
 qw, qx, qy, qz = utils.euler_to_quaternion(0, 0, 0)
 # x, y, z, dx, dy, dz, qw, qx, qy, qz, wx, wy, wz
-state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, vx, vy, vz, qw, qx, qy, qz, 0.001,
-                      0.000, 0.000)
+state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, vx, vy, vz, qw, qx, qy, qz, 0.1,
+                      0.0, 0.1)
 simulator = physics.Simulator(qubesat, planet, state, 1)
 
 """
 Step 3: Add all the desired force, torque, and acceleration functions to the simulator
+inputs are <state, cubesat, planet>
 """
-simulator.add_accelerator(lambda s, c, p: planet.get_gravitational_acceleration(s))  # Acceleration due to the planet
+# Acceleration due to the planet
+simulator.add_accelerator(lambda s, c, p: planet.get_gravitational_acceleration(s))
 
 """
 Step 4: Configure the stop condition for the simulation. Run the simulation with the desired renderer
@@ -39,21 +41,6 @@ def stop_condition(states, times): return len(states) > utils.steps_per_orbit(co
 
 r = renderer.Renderer()
 r.run(simulator, stop_condition)
-
-# import pyIGRF
-# import numpy as np
-# for state in r.states:
-#     # D: declination (+ve east)
-#     # I: inclination (+ve down)
-#     # H: horizontal intensity
-#     # X: north component
-#     # Y: east component
-#     # Z: vertical component (+ve down)
-#     # F: total intensity
-#     # unit: degree or nT
-#     s = pyIGRF.igrf_value(state.get_lat(), state.get_lon(), state.get_r() - constants.R_EARTH, 1999)
-#     magnetic_field_vector = np.array([s[3], s[4], s[5]])
-#     # print(state.ned_to_ecef(magnetic_field_vector))
 
 """
 Step 5: Choose the plots you want to display after running the simulation
@@ -72,8 +59,18 @@ plot6 = plots.OrbitalPlot3D(planet, show_magnetic_field=True, show_planet=False)
 r.add_plot(plot6)
 plot7 = plots.OrientationPlot()
 r.add_plot(plot7)
+plot8 = plots.AngularVelocityPlot()
+r.add_plot(plot8)
+plot9 = plots.MagneticFieldPlot(planet)
+r.add_plot(plot9)
 
 """
 Step 6: Display all the plots
 """
-r.render(figsize=(15, 25), columns=2)
+# r.render(figsize=(15, 25), columns=2)
+
+"""
+Step 7: Run any animated plots
+"""
+animated_plot1 = plots.OrientationPlotAnimated(qubesat)
+r.run_animated_plot(animated_plot1, 10.0, start_time=0, stop_time=100)

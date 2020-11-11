@@ -1,12 +1,11 @@
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.ticker import MultipleLocator
 import numpy as np
 import math
 from abc import ABC, abstractmethod
 
 import simple_space_simulator.utils as utils
-import simple_space_simulator.constants as constants
-import pyIGRF
 
 
 class SimPlot(ABC):
@@ -14,8 +13,8 @@ class SimPlot(ABC):
     Parent class for all simple space simulator plot subclasses
     """
 
-    def __init__(self):
-        self.is_3d = False
+    def __init__(self, is_3d=False):
+        self.is_3d = is_3d
 
     @abstractmethod
     def build(self, states, time_stamps, ax):
@@ -117,7 +116,7 @@ class OrbitalPlot3D(SimPlot):
     """
 
     def __init__(self, planet, show_planet=False, show_magnetic_field=False):
-        self.is_3d = True
+        super().__init__(is_3d=True)
         self.planet = planet
         self.show_planet = show_planet
         self.show_magnetic_field = show_magnetic_field
@@ -142,13 +141,11 @@ class OrbitalPlot3D(SimPlot):
             ax.plot_surface(x.T, y.T, z.T, cstride=1, rstride=1)  # we've already pruned ourselves
 
         if self.show_magnetic_field:
-            for i in range(0, len(states), len(states)//10):
+            for i in range(0, len(states), len(states) // 10):
                 state = states[i]
-                s = pyIGRF.igrf_value(state.get_lat(), state.get_lon(), state.get_r() - constants.R_EARTH, 1999)
-                magnetic_field_vector = np.array([s[3], s[4], s[5]])
+                magnetic_field_vector = self.planet.get_magnetic_field(state)
                 magnetic_field_vector_norm = magnetic_field_vector / np.linalg.norm(magnetic_field_vector)
-                magnetic_field_vector_norm *= 4000000  # size of vector is relative
-                magnetic_field_vector_norm = state.ned_to_ecef(magnetic_field_vector_norm)
+                magnetic_field_vector_norm *= 4e6  # this makes the vectors visible
                 ax.quiver(state.get_x(), state.get_y(), state.get_z(), magnetic_field_vector_norm[0],
                           magnetic_field_vector_norm[1], magnetic_field_vector_norm[2], color='green')
 
@@ -204,15 +201,14 @@ class OrientationPlot(SimPlot):
     def build(self, states, time_stamps, ax):
         X, Y, Z = [], [], []
         for state in states:
-            q = state.get_orientation_quaternion()
-            x, y, z = utils.quaternion_to_euler_angle(q[0], q[1], q[2], q[3])
+            x, y, z = state.get_roll_pitch_yaw()
             X.append(x)
             Y.append(y)
             Z.append(z)
 
-        ax.plot(time_stamps, X, color="red", label='x')
-        ax.plot(time_stamps, Y, color="green", label='y')
-        ax.plot(time_stamps, Z, color="blue", label='z')
+        ax.plot(time_stamps, X, color="red", label='roll')
+        ax.plot(time_stamps, Y, color="green", label='pitch')
+        ax.plot(time_stamps, Z, color="blue", label='yaw')
 
         ax.set_title("Orientation Plot")
         ax.set_xlabel("time (s)")
@@ -220,3 +216,104 @@ class OrientationPlot(SimPlot):
 
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
+
+
+class AngularVelocityPlot(SimPlot):
+    """
+    This plot plots the orientation of the satellite itself
+    """
+
+    def build(self, states, time_stamps, ax):
+        X, Y, Z = [], [], []
+        for state in states:
+            x, y, z = state.get_angular_velocity_vector()
+            X.append(x)
+            Y.append(y)
+            Z.append(z)
+
+        ax.plot(time_stamps, X, color="red", label='v roll')
+        ax.plot(time_stamps, Y, color="green", label='v pitch')
+        ax.plot(time_stamps, Z, color="blue", label='v yaw')
+
+        ax.set_title("Angular Velocity Plot")
+        ax.set_xlabel("time (s)")
+        ax.set_ylabel("radians / s")
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels)
+
+
+class MagneticFieldPlot(SimPlot):
+    """
+    This plot plots the strength of the x, y, and z components of the magnetic field in tesla
+    """
+
+    def __init__(self, planet):
+        super().__init__()
+        self.planet = planet
+
+    def build(self, states, time_stamps, ax):
+        x, y, z = [], [], []
+        for state in states:
+            field = self.planet.get_magnetic_field(state)
+            x.append(field[0])
+            y.append(field[1])
+            z.append(field[2])
+        ax.plot(time_stamps, x, color="red", label='x')
+        ax.plot(time_stamps, y, color="green", label='y')
+        ax.plot(time_stamps, z, color="blue", label='z')
+        ax.set_title("Magnetic Field Plot")
+        ax.set_xlabel("time (s)")
+        ax.set_ylabel("field strength (T)")
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels)
+
+
+"""
+Animated plots
+"""
+
+
+class AnimatedPlot(SimPlot, ABC):
+
+    @abstractmethod
+    def update(self):
+        pass
+
+
+class OrientationPlotAnimated(AnimatedPlot):
+    def __init__(self, cubesat):
+        super().__init__(is_3d=True)
+        self.cubesat = cubesat
+        self.collection = Poly3DCollection(
+            utils.points_to_verts(self.cubesat.points), facecolors='grey',
+            linewidths=1, edgecolors='black', alpha=1.0)
+        # points with added zero column
+        self.quaternion_points = np.concatenate((np.zeros((8, 1)), self.cubesat.points), 1)
+
+    def build(self, states, time_stamps, ax):
+        self.states = states
+        self.time_stamps = time_stamps
+        self.ax = ax
+
+        axes_size = np.max(self.cubesat.points) * 2 * 2
+        self.ax.set_xlim3d([-axes_size, axes_size])
+        self.ax.set_xlabel('X')
+        self.ax.set_ylim3d([-axes_size, axes_size])
+        self.ax.set_ylabel('Y')
+        self.ax.set_zlim3d([-axes_size, axes_size])
+        self.ax.set_zlabel('Z')
+        self.ax.add_collection3d(self.collection)
+
+    def update(self):
+        for state, time in zip(self.states, self.time_stamps):
+            points = []
+            for quaternion_point in self.quaternion_points:
+                points.append(
+                    utils.quaternion_multiply(
+                        utils.quaternion_multiply(
+                            state.get_orientation_quaternion(), quaternion_point),
+                        state.get_orientation_quaternion_conjugate())[1:])
+            self.ax.collections[0].set_verts(utils.points_to_verts(np.array(points)))
+            yield state, time

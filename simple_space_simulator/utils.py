@@ -109,3 +109,13 @@ def euler_to_quaternion(roll, pitch, yaw):
     qw = np.cos(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
 
     return qw, qx, qy, qz
+
+
+# Function for computing the vertices used in rendering in matplotlib
+def points_to_verts(points):
+    return [[points[0], points[1], points[2], points[3]],
+            [points[4], points[5], points[6], points[7]],
+            [points[0], points[1], points[5], points[4]],
+            [points[2], points[3], points[7], points[6]],
+            [points[1], points[2], points[6], points[5]],
+            [points[4], points[7], points[3], points[0]]]
