@@ -283,37 +283,75 @@ class AnimatedPlot(SimPlot, ABC):
 
 
 class OrientationPlotAnimated(AnimatedPlot):
-    def __init__(self, cubesat):
+    def __init__(self, cubesat, draw_axes=True, draw_magnetic_dipoles=True):
         super().__init__(is_3d=True)
         self.cubesat = cubesat
+        self.draw_axes = draw_axes
+        self.draw_magnetic_dipoles = draw_magnetic_dipoles
         self.collection = Poly3DCollection(
             utils.points_to_verts(self.cubesat.points), facecolors='grey',
-            linewidths=1, edgecolors='black', alpha=1.0)
-        # points with added zero column
-        self.quaternion_points = np.concatenate((np.zeros((8, 1)), self.cubesat.points), 1)
+            linewidths=1, edgecolors='black', alpha=0.6)
 
     def build(self, states, time_stamps, ax):
         self.states = states
         self.time_stamps = time_stamps
         self.ax = ax
 
-        axes_size = np.max(self.cubesat.points) * 2 * 2
-        self.ax.set_xlim3d([-axes_size, axes_size])
+        self.axes_size = np.max(self.cubesat.points) * 2 * 2
+        self.ax.set_xlim3d([-self.axes_size, self.axes_size])
         self.ax.set_xlabel('X')
-        self.ax.set_ylim3d([-axes_size, axes_size])
+        self.ax.set_ylim3d([-self.axes_size, self.axes_size])
         self.ax.set_ylabel('Y')
-        self.ax.set_zlim3d([-axes_size, axes_size])
+        self.ax.set_zlim3d([-self.axes_size, self.axes_size])
         self.ax.set_zlabel('Z')
         self.ax.add_collection3d(self.collection)
+
+        self.x = np.array([self.axes_size / 2, 0, 0])
+        self.y = np.array([0, self.axes_size / 2, 0])
+        self.z = np.array([0, 0, self.axes_size / 2])
+
+        # static reference axes
+        self.ax.quiver(0, 0, 0, self.x[0], self.x[1], self.x[2], color='red')
+        self.ax.quiver(0, 0, 0, self.y[0], self.y[1], self.y[2], color='green')
+        self.ax.quiver(0, 0, 0, self.z[0], self.z[1], self.z[2], color='blue')
+
+        # dynamic local axes
+        if self.draw_axes:
+            self.x_quiver = self.ax.quiver(0, 0, 0, self.axes_size / 2, 0, 10, color='red')
+            self.y_quiver = self.ax.quiver(0, 0, 0, 0, self.axes_size / 2, 0, color='green')
+            self.z_quiver = self.ax.quiver(0, 0, 0, 0, 0, self.axes_size / 2, color='blue')
+
+        if self.draw_magnetic_dipoles:
+            self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, 0, 0, 0, color='purple')
+
+    def update_axes(self, state):
+        self.x_quiver.remove()
+        self.y_quiver.remove()
+        self.z_quiver.remove()
+        x = utils.quaternion_rotate(state.get_orientation_quaternion(), self.x)
+        y = utils.quaternion_rotate(state.get_orientation_quaternion(), self.y)
+        z = utils.quaternion_rotate(state.get_orientation_quaternion(), self.z)
+        self.x_quiver = self.ax.quiver(0, 0, 0, x[0], x[1], x[2], color='red')
+        self.y_quiver = self.ax.quiver(0, 0, 0, y[0], y[1], y[2], color='green')
+        self.z_quiver = self.ax.quiver(0, 0, 0, z[0], z[1], z[2], color='blue')
+
+    def update_magnetic_dipoles(self, state):
+        self.cubesat_magnetic_dipole.remove()
+        cubesat_dipole = self.cubesat.get_magnetic_dipole(state)
+        self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, cubesat_dipole[0], cubesat_dipole[1], cubesat_dipole[2],
+                                                      color='purple')
 
     def update(self):
         for state, time in zip(self.states, self.time_stamps):
             points = []
-            for quaternion_point in self.quaternion_points:
-                points.append(
-                    utils.quaternion_multiply(
-                        utils.quaternion_multiply(
-                            state.get_orientation_quaternion(), quaternion_point),
-                        state.get_orientation_quaternion_conjugate())[1:])
+            for point in self.cubesat.points:
+
+                if self.draw_axes:
+                    self.update_axes(state)
+
+                if self.draw_magnetic_dipoles:
+                    self.update_magnetic_dipoles(state)
+
+                points.append(utils.quaternion_rotate(state.get_orientation_quaternion(), point))
             self.ax.collections[0].set_verts(utils.points_to_verts(np.array(points)))
             yield state, time

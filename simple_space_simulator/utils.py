@@ -111,6 +111,15 @@ def euler_to_quaternion(roll, pitch, yaw):
     return qw, qx, qy, qz
 
 
+def quaternion_conjugate(q):
+    return np.array([q[0], -q[1], -q[2], -q[3]])
+
+
+# rotate v (x,y,z) by q (w,x,y,z)
+def quaternion_rotate(q, v):
+    return quaternion_multiply(quaternion_multiply(q, np.append([0], v)), quaternion_conjugate(q))[1:]
+
+
 # Function for computing the vertices used in rendering in matplotlib
 def points_to_verts(points):
     return [[points[0], points[1], points[2], points[3]],

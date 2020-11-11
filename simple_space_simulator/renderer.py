@@ -38,13 +38,12 @@ class Renderer:
 
     def render(self, figsize=(7, 5), columns=3):
         fig = plt.figure(figsize=figsize)
+        rows = len(self.plots) // columns + (1 if len(self.plots) % columns > 0 else 0)
         for i, plot in enumerate(self.plots):
             if plot.is_3d:
-                ax = fig.add_subplot((len(self.plots) + 1) // columns if not columns == 1 else len(self.plots), columns,
-                                     i + 1, projection='3d')
+                ax = fig.add_subplot(rows, columns, i + 1, projection='3d')
             else:
-                ax = fig.add_subplot((len(self.plots) + 1) // columns if not columns == 1 else len(self.plots), columns,
-                                     i + 1)
+                ax = fig.add_subplot(rows, columns, i + 1)
             plot.build(self.states, self.time_stamps, ax)
         plt.show()
 

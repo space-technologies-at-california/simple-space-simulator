@@ -26,7 +26,7 @@ class State:
         return self.q
 
     def get_orientation_quaternion_conjugate(self):
-        return np.array([self.q[0], -self.q[1], -self.q[2], -self.q[3]])
+        return utils.quaternion_conjugate(self.q)
 
     def get_angular_velocity_vector(self):
         return self.w
@@ -154,14 +154,27 @@ class Cubesat:
         self.inertia = inertia
         self.inertia_inv = np.linalg.inv(inertia)
 
+        # static magnetic dipoles as vectors in 3d
+        self.magnetic_dipoles = []
+
+        # Dimensions
         self.length = length
         self.width = width
         self.height = height
-        self.points = np.array([[-width/2, -length/2, -height/2],
-                                [width/2, -length/2, -height/2],
-                                [width/2, length/2, -height/2],
-                                [-width/2, length/2, -height/2],
-                                [-width/2, -length/2, height/2],
-                                [width/2, -length/2, height/2],
-                                [width/2, length/2, height/2],
-                                [-width/2, length/2, height/2]])
+        self.points = np.array([[-width / 2, -length / 2, -height / 2],
+                                [width / 2, -length / 2, -height / 2],
+                                [width / 2, length / 2, -height / 2],
+                                [-width / 2, length / 2, -height / 2],
+                                [-width / 2, -length / 2, height / 2],
+                                [width / 2, -length / 2, height / 2],
+                                [width / 2, length / 2, height / 2],
+                                [-width / 2, length / 2, height / 2]])
+
+    def add_magnetic_dipole(self, dipole):
+        self.magnetic_dipoles.append(dipole)
+
+    def get_magnetic_dipole(self, state):
+        dipole_sum = np.array([0.0, 0.0, 0.0])
+        for dipole in self.magnetic_dipoles:
+            dipole_sum += utils.quaternion_rotate(state.get_orientation_quaternion(), dipole)
+        return dipole_sum
