@@ -2,7 +2,7 @@ import numpy as np
 import pyIGRF
 
 import simple_space_simulator.utils as utils
-import simple_space_simulator.cubesat as cubesat
+import simple_space_simulator.cubesat as cube
 from simple_space_simulator import constants
 
 
@@ -30,6 +30,10 @@ class Simulator:
         Simulator
             A simulator object that can be stepped through and used with a renderer object
         """
+        assert isinstance(cubesat, cube.Cubesat), "cubesat must be a Cubesat object"
+        assert isinstance(planet, Planet), "planet must be a Planet object"
+        assert isinstance(state, cube.State), "state must be a State object"
+        assert isinstance(dt, (int, float)) and dt > 0, "dt must be a positive value"
         self.dt = dt
         self.cubesat = cubesat
         self.planet = planet
@@ -113,36 +117,45 @@ class Simulator:
         q /= np.linalg.norm(q)
 
         # A*state + B*acceleration
-        self.state = cubesat.state_from_vectors(
+        self.state = cube.state_from_vectors(
             np.dot(self.A, self.state.get_cartesian_state_vector()) + np.dot(self.B, net_acc), q, angular_velocity)
         self.elapsed_time += self.dt
         return self.elapsed_time, self.state
 
     def add_forcer(self, forcer):
+        assert callable(forcer), "forcer must be a function"
         self.forces.append(forcer)
 
     def add_accelerator(self, accelerator):
+        assert callable(accelerator), "accelerator must be a function"
         self.accelerations.append(accelerator)
 
     def add_torquer(self, torquer):
+        assert callable(torquer), "torquer must be a function"
         self.torques.append(torquer)
 
     def add_angular_accelerator(self, angular_accelerator):
+        assert callable(angular_accelerator), "angular_accelerator must be a function"
         self.angular_accelerations.append(angular_accelerator)
 
 
 class Planet:
     def __init__(self, mass, radius, magnetic_field_model=pyIGRF):
+        assert isinstance(mass, (int, float)) and mass > 0, "mass must be a positive value"
+        assert isinstance(radius, (int, float)) and radius > 0, "radius must be a positive value"
         self.radius = radius  # m
         self.mass = mass  # kg
         self.magnetic_field_model = magnetic_field_model
 
     def get_gravitational_acceleration(self, state):
+        assert isinstance(state, cube.State), "state must be a State object"
         r_hat = state.state_vector[:3] / np.linalg.norm(state.state_vector[:3])
         a = -constants.G * self.mass / np.linalg.norm(state.state_vector[:3]) ** 2 * r_hat
         return a
 
     def get_magnetic_field(self, state, ecef=True):
+        assert isinstance(state, cube.State), "state must be a State object"
+        assert isinstance(ecef, bool), "ecef must be a boolean"
         # D: declination (+ve east)
         # I: inclination (+ve down)
         # H: horizontal intensity

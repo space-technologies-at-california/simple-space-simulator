@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import simple_space_simulator.constants as constants
+import simple_space_simulator.physics as physics
 import time
 
 
@@ -10,6 +11,8 @@ class Renderer:
         self.plots = []
 
     def run(self, simulator, stop_condition):
+        assert isinstance(simulator, physics.Simulator), "simulator must be a Simulator object"
+        assert callable(stop_condition), "stop_condition must be a function"
         self.states.append(simulator.state)
         self.time_stamps.append(0)
         while not stop_condition(self.states, self.time_stamps):
@@ -37,6 +40,7 @@ class Renderer:
         self.plots = []
 
     def render(self, figsize=(7, 5), columns=3):
+        assert isinstance(figsize, tuple) and isinstance(columns, int), "invalid dimensions: figsize must be a tuple and columns must be an int"
         fig = plt.figure(figsize=figsize)
         rows = len(self.plots) // columns + (1 if len(self.plots) % columns > 0 else 0)
         for i, plot in enumerate(self.plots):

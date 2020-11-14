@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import simple_space_simulator.utils as utils
+import simple_space_simulator.physics as physics
 
 
 class State:
@@ -10,6 +11,10 @@ class State:
         x, y, z, dx, dy, dz
         Rotation is expressed as theta as quaternion q (w, x, y, z)
         """
+        assert isinstance(x, (int, float)) and isinstance(y, (int, float)) and isinstance(z, (int, float)), "x y z must be int or float values"
+        assert isinstance(dx, (int, float)) and isinstance(dy, (int, float)) and isinstance(dz, (int, float)), "dx dy dz must be int or float values"
+        assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and isinstance(qy, (int, float)) and isinstance(qz, (int, float)), "qw qx qy qz must be int or float values"
+        assert isinstance(wx, (int, float)) and isinstance(wy, (int, float)) and isinstance(wz, (int, float)), "wx wy wz must be int or float values"
         # contains the state as a cartesian state vector
         self.state_vector = np.array([x, y, z, dx, dy, dz])
         self.w = np.array([wx, wy, wz])
@@ -74,6 +79,7 @@ class State:
         return self.get_spherical_state_vector()[0]
 
     def get_altitude(self, planet):
+        assert isinstance(planet, physics.Planet), "planet must be a Planet object"
         return self.get_r() - planet.radius
 
     def get_theta(self):
@@ -100,6 +106,7 @@ class State:
     # NED for magnetic field
     # np.dot(T, vector in NED) results in vector in ECEF
     def ned_to_ecef(self, vector):
+        assert isinstance(vector, np.ndarray) and vector.ndim == 1, "vector must be a vector"
         lon = self.get_lon()
         lat = self.get_lat()
         DCMned = np.linalg.inv(np.array([[-np.sin(lat) * np.cos(lon), -np.sin(lat) * np.sin(lon), np.cos(lat)],
@@ -109,6 +116,7 @@ class State:
 
     # np.dot(T, vector in ECEF) results in vector in NED
     def ecef_to_ned(self, vector):
+        assert isinstance(vector, np.ndarray) and vector.ndim == 1, "vector must be a vector"
         lon = self.get_lon()
         lat = self.get_lat()
         DCMef = np.array([[-np.sin(lat) * np.cos(lon), -np.sin(lat) * np.sin(lon), np.cos(lat)],
@@ -121,6 +129,9 @@ class State:
 
 
 def state_from_vectors(state, q, w):
+    assert isinstance(state, np.ndarray) and state.ndim == 1, "state must be a vector"
+    assert isinstance(q, np.ndarray) and q.ndim == 1, "q must be a vector"
+    assert isinstance(w, np.ndarray) and w.ndim == 1, "w must be a vector"
     return State(state[0], state[1], state[2], state[3], state[4], state[5], q[0], q[1], q[2], q[3], w[0], w[1], w[2])
 
 
@@ -150,6 +161,12 @@ class Cubesat:
         mass in kg
         length, width, height in m
         """
+        assert isinstance(mass, (int, float)) and mass > 0, "mass must be a positive value"
+        assert isinstance(length, (int, float)) and length > 0, "length must be a positive value"
+        assert isinstance(width, (int, float)) and width > 0, "width must be a positive value"
+        assert isinstance(height, (int, float)) and height > 0, "height must be a positive value"
+        assert isinstance(inertia, np.ndarray) and inertia.ndim == 2, "inertia must be a 2d matrix"
+
         self.mass = mass
         self.inertia = inertia
         self.inertia_inv = np.linalg.inv(inertia)
@@ -171,9 +188,11 @@ class Cubesat:
                                 [-width / 2, length / 2, height / 2]])
 
     def add_magnetic_dipole(self, dipole):
+        assert isinstance(dipole, np.ndarray) and dipole.ndim == 1, "dipole must be a vector"
         self.magnetic_dipoles.append(dipole)
 
     def get_magnetic_dipole(self, state):
+        assert isinstance(state, State), "state must be a State object"
         dipole_sum = np.array([0.0, 0.0, 0.0])
         for dipole in self.magnetic_dipoles:
             dipole_sum += utils.quaternion_rotate(state.get_orientation_quaternion(), dipole)

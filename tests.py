@@ -10,6 +10,10 @@ import simple_space_simulator.utils as utils
 class TestSimpleOrbit(unittest.TestCase):
 
     def run_simulator_one_orbit(self, altitude, time_per_step, steps_per_orbit, inclination=0):
+        assert isinstance(altitude, (int, float)) and altitude > 0, "altitude must be a positive value"
+        assert isinstance(time_per_step, (int, float)) and time_per_step > 0, "time_per_step must be a positive value"
+        assert isinstance(steps_per_orbit, (int, float)) and steps_per_orbit > 0, "steps_per_orbit must be a positive value"
+        assert isinstance(inclination, (int, float)), "inclination must be a radian value"
         # Standard simulator code
         qubesat = cubesat.Cubesat(1, length=0.1, width=0.1, height=0.1)
         planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)
