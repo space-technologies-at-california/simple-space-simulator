@@ -94,8 +94,8 @@ def quaternion_multiply(quaternion1, quaternion0):
 
 
 def quaternion_to_euler_angle(w, x, y, z):
-    assert isinstance(w, (int, float)) and isinstance(x, (int, float)) and isinstance(y, (int,
-        float)) and isinstance(z, (int, float)), "w x y z must be int or float values"
+    assert isinstance(w, (int, float)) and isinstance(x, (int, float)) and \
+        isinstance(y, (int, float)) and isinstance(z, (int, float)), "w x y z must be int or float values"
     ysqr = y * y
 
     t0 = +2.0 * (w * x + y * z)

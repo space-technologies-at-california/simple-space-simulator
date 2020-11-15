@@ -15,8 +15,8 @@ class State:
             "x y z must be int or float values"
         assert isinstance(dx, (int, float)) and isinstance(dy, (int, float)) and isinstance(dz, (int, float)), \
             "dx dy dz must be int or float values"
-        assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and isinstance(qy, (int,
-            float)) and isinstance(qz, (int, float)), "qw qx qy qz must be int or float values"
+        assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
+            isinstance(qy, (int, float)) and isinstance(qz, (int, float)), "qw qx qy qz must be int or float values"
         assert isinstance(wx, (int, float)) and isinstance(wy, (int, float)) and isinstance(wz, (int, float)), \
             "wx wy wz must be int or float values"
         # contains the state as a cartesian state vector
