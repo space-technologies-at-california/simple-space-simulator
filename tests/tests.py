@@ -35,13 +35,14 @@ class TestSimpleOrbit(unittest.TestCase):
 
         altitude = constants.ISS_ALTITUDE  # meters
         time_per_step = 0.1  # seconds
-        orbital_period = utils.steps_per_orbit(altitude, time_per_step)
-        steps_per_orbit = orbital_period / time_per_step
+        orbital_period = utils.orbital_period(altitude)
+        steps_per_orbit = utils.steps_per_orbit(altitude, time_per_step)
 
         r = self.run_simulator_one_orbit(altitude, time_per_step, steps_per_orbit)
 
         # Tests
-        self.assertLess(abs(orbital_period - 5600), 50, msg='Correct orbital period of ISS within 50s')
+        self.assertLess(abs(orbital_period - 5600), 50, msg='Correct orbital period of ISS +- 50s')
+        self.assertEqual(steps_per_orbit, int(orbital_period / time_per_step), msg='Correct number of steps computed')
         self.assertEqual(len(r.states), int(steps_per_orbit), 'Correct number of steps taken')
 
         error = r.states[-1].get_cartesian_state_vector() - r.states[0].get_cartesian_state_vector()

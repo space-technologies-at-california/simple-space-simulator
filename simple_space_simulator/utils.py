@@ -48,6 +48,25 @@ def inclination_to_cartesian_velocity(speed, inclination):
     return 0, abs(speed) * np.cos(inclination), abs(speed) * np.sin(inclination)
 
 
+def orbital_period(altitude, radius=constants.R_EARTH):
+    """
+    Returns the orbital period in seconds. Assumes perfectly circular orbit.
+
+    Parameters
+    ----------
+    altitude : float
+        The altitude in meters above the center of the body being orbited.
+    radius : float, optional
+        The radius of the body being orbited
+
+    Returns
+    -------
+    float
+        duration of an orbit in seconds
+    """
+    return 2 * math.pi * math.sqrt((radius + altitude) ** 3 / (constants.G * constants.M_EARTH))
+
+
 def steps_per_orbit(altitude, time_per_step, radius=constants.R_EARTH):
     """
     Returns the number of steps for a complete orbit based on constant speed at constant altitude model
@@ -66,7 +85,7 @@ def steps_per_orbit(altitude, time_per_step, radius=constants.R_EARTH):
     int
         number of steps
     """
-    return int(2 * math.pi * math.sqrt((radius + altitude) ** 3 / (constants.G * constants.M_EARTH)) / time_per_step)
+    return int(orbital_period(altitude, radius) / time_per_step)
 
 
 """
