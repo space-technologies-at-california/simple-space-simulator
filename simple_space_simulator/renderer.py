@@ -40,7 +40,8 @@ class Renderer:
         self.plots = []
 
     def render(self, figsize=(7, 5), columns=3):
-        assert isinstance(figsize, tuple) and isinstance(columns, int), "invalid dimensions: figsize must be a tuple and columns must be an int"
+        assert isinstance(figsize, tuple) and isinstance(columns, int), \
+            "invalid dimensions: figsize must be a tuple and columns must be an int"
         fig = plt.figure(figsize=figsize)
         rows = len(self.plots) // columns + (1 if len(self.plots) % columns > 0 else 0)
         for i, plot in enumerate(self.plots):

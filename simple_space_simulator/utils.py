@@ -94,7 +94,8 @@ def quaternion_multiply(quaternion1, quaternion0):
 
 
 def quaternion_to_euler_angle(w, x, y, z):
-    assert isinstance(w, (int, float)) and isinstance(x, (int, float)) and isinstance(y, (int, float)) and isinstance(z, (int, float)), "w x y z must be int or float values"
+    assert isinstance(w, (int, float)) and isinstance(x, (int, float)) and isinstance(y, (int, 
+    float)) and isinstance(z, (int, float)), "w x y z must be int or float values"
     ysqr = y * y
 
     t0 = +2.0 * (w * x + y * z)
@@ -114,7 +115,8 @@ def quaternion_to_euler_angle(w, x, y, z):
 
 
 def euler_to_quaternion(roll, pitch, yaw):
-    assert isinstance(roll, (int, float)) and isinstance(pitch, (int, float)) and isinstance(yaw, (int, float)), "roll pitch yaw must be int or float values"
+    assert isinstance(roll, (int, float)) and isinstance(pitch, (int, float)) and isinstance(yaw, (int, float)), \
+        "roll pitch yaw must be int or float values"
     qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
     qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2)
     qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2)
