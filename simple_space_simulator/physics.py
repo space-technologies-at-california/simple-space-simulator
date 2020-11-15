@@ -164,8 +164,7 @@ class Planet:
         # Z: vertical component (+ve down)
         # F: total intensity
         # unit: degree or nT
-        s = self.magnetic_field_model.igrf_value(
-            state.get_lat(), state.get_lon(), state.get_r() - constants.R_EARTH, 1999)
+        s = self.magnetic_field_model.igrf_value(state.get_lat(), state.get_lon(), (state.get_r() - constants.R_EARTH) / 1000, 1999)
         magnetic_field_vector = np.array([s[3], s[4], s[5]]) / 1e9  # converted to T
         if ecef:
             return state.ned_to_ecef(magnetic_field_vector)
