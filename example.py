@@ -12,7 +12,7 @@ Step 1: Define the cubesat and planet specifications
 """
 qubesat = cubesat.Cubesat(1, length=0.2, width=0.2, height=0.4)  # mass in kg, length, width, height in m
 
-static_dipole = np.array([0, 1e5, 0])  # dipole in tesla referenced from the cubesat frame
+static_dipole = np.array([0, 0, 0])  # dipole in tesla referenced from the cubesat frame
 qubesat.add_magnetic_dipole(static_dipole)
 planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, radius in meters
 
@@ -20,7 +20,7 @@ planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, rad
 Step 2: Configure the initial state of the cubesat in the simulation
 """
 inclination = 0
-step_size = 1
+step_size = 10
 
 vx, vy, vz = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(constants.ISS_ALTITUDE), inclination)
 qw, qx, qy, qz = utils.euler_to_quaternion(0, 0, 0)

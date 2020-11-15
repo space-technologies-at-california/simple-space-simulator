@@ -70,55 +70,60 @@ class Simulator:
                            [0, self.dt, 0],
                            [0, 0, self.dt]])
 
-    def step(self):
-        """
-        Computes the accelerations for the current time step given state S.
-        Returns
-        -------
-        tuple
-            A  tuple that contains the elapsed time and the new state
-        """
+    def compute_accelerations(self, state=None):
+        if state is None:
+            state = self.state
+
         net_force = np.zeros(3)
         for forcer in self.forces:
-            net_force += forcer(self.state, self.cubesat, self.planet)
+            net_force += forcer(state, self.cubesat, self.planet)
 
         net_acc = np.zeros(3)
         for accelerator in self.accelerations:
-            net_acc += accelerator(self.state, self.cubesat, self.planet)
+            net_acc += accelerator(state, self.cubesat, self.planet)
 
         net_acc += net_force / self.cubesat.mass
 
         net_torque = np.zeros(3)
         for torquer in self.torques:
-            net_torque += torquer(self.state, self.cubesat, self.planet)
+            net_torque += torquer(state, self.cubesat, self.planet)
 
         net_angular_acc = np.zeros(3)
         for angular_accelerator in self.angular_accelerations:
-            net_angular_acc += angular_accelerator(self.state, self.cubesat, self.planet)
+            net_angular_acc += angular_accelerator(state, self.cubesat, self.planet)
 
         net_angular_acc += np.dot(self.cubesat.inertia_inv, net_torque)
 
-        angular_velocity = self.state.get_angular_velocity_vector() + net_angular_acc * self.dt
+        return net_acc, net_angular_acc
 
-        # https://math.stackexchange.com/questions/39553/how-do-i-apply-an-angular-velocity-vector3-to-a-unit-quaternion-orientation
-        w = angular_velocity * self.dt
-
+    def update_orientation(self, angular_velocity, angular_acc, dt=None):
+        if dt is None:
+            dt = self.dt
+        w = angular_velocity * dt + 1/2 * angular_acc * self.dt ** 2
         w_norm = np.linalg.norm(w)
         w_f = w * np.sin(w_norm / 2) / w_norm if w_norm != 0 else [0, 0, 0]
         q = utils.quaternion_multiply(
             np.array([np.cos(w_norm / 2), w_f[0], w_f[1], w_f[2]]),
             self.state.get_orientation_quaternion())
-
-        a = 1/2 * net_angular_acc * self.dt ** 2
-        a_norm = np.linalg.norm(a)
-        a_f = a * np.sin(a_norm / 2) / a_norm if a_norm != 0 else [0, 0, 0]
-        q = utils.quaternion_multiply(np.array([np.cos(a_norm / 2), a_f[0], a_f[1], a_f[2]]), q)
-
         q /= np.linalg.norm(q)
+        return q
 
+    def step(self):
+        """
+        Computes the new state for the current time step given state S using Runge-Kutta 4 (ode45).
+        Returns
+        -------
+        tuple
+            A  tuple that contains the elapsed time and the new state
+        """
+
+        acc, angular_acc = self.compute_accelerations()
         # A*state + B*acceleration
-        self.state = cube.state_from_vectors(
-            np.dot(self.A, self.state.get_cartesian_state_vector()) + np.dot(self.B, net_acc), q, angular_velocity)
+        s = np.dot(self.A, self.state.get_cartesian_state_vector()) + np.dot(self.B, acc)
+        angular_velocity = self.state.get_angular_velocity_vector() + angular_acc * self.dt
+        q = self.update_orientation(angular_velocity, angular_acc)
+
+        self.state = cube.state_from_vectors(s, q, angular_velocity)
         self.elapsed_time += self.dt
         return self.elapsed_time, self.state
 
