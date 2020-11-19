@@ -5,20 +5,16 @@ import time
 
 
 class Renderer:
-    def __init__(self):
+    def __init__(self, resolution=10):
+        self.resolution = resolution
         self.time_stamps = []
         self.states = []
         self.plots = []
 
-    def run(self, simulator, stop_condition):
+    def run(self, simulator, stop_time, start_time=0):
         assert isinstance(simulator, physics.Simulator), "simulator must be a Simulator object"
-        assert callable(stop_condition), "stop_condition must be a function"
-        self.states.append(simulator.state)
-        self.time_stamps.append(0)
-        while not stop_condition(self.states, self.time_stamps):
-            time, state = simulator.step()
-            self.states.append(state)
-            self.time_stamps.append(time)
+        assert isinstance(stop_time, (int, float)) and stop_time > 0, "stop time must be a float or int > 0"
+        self.time_stamps, self.states = simulator.step(start_time, stop_time, self.resolution)
         completion_msg = "Simulation Complete \n" \
                          "{0} seconds \n" \
                          "{1} minutes \n" \

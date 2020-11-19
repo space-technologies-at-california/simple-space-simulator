@@ -20,13 +20,14 @@ planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, rad
 Step 2: Configure the initial state of the cubesat in the simulation
 """
 inclination = 0
-step_size = 10
+max_step_size = 10
 
 vx, vy, vz = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(constants.ISS_ALTITUDE), inclination)
-qw, qx, qy, qz = utils.euler_to_quaternion(0, 0, 0)
-# x, y, z, dx, dy, dz, qw, qx, qy, qz, wx, wy, wz
-state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, vx, vy, vz, qw, qx, qy, qz, 0.001, 0.0, 0.0)
-simulator = physics.Simulator(qubesat, planet, state, step_size)
+
+# x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw
+# roll, pitch, yaw are defined referenced to ecef, droll, dpitch, dyaw are body rates
+initial_state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, vx, vy, vz, 0, 0, 0, 0.001, 0.0, 0.001)
+simulator = physics.Simulator(qubesat, planet, initial_state, max_step_size)
 
 """
 Step 3: Add all the desired force, torque, and acceleration functions to the simulator
@@ -49,14 +50,8 @@ simulator.add_torquer(magnetic_torques)
 """
 Step 4: Configure the stop condition for the simulation. Run the simulation with the desired renderer
 """
-
-
-# stop after a specified number of steps
-def stop_condition(states, times): return len(states) > utils.steps_per_orbit(constants.ISS_ALTITUDE, step_size)
-
-
-r = renderer.Renderer()
-r.run(simulator, stop_condition)
+r = renderer.Renderer(resolution=1)
+r.run(simulator, stop_time=int(utils.orbital_period(constants.ISS_ALTITUDE)))
 
 """
 Step 5: Choose the plots you want to display after running the simulation
@@ -89,4 +84,4 @@ r.render(figsize=(5, 7), columns=4)
 Step 7: Run any animated plots
 """
 animated_plot1 = plots.OrientationPlotAnimated(qubesat)
-# r.run_animated_plot(animated_plot1, 20.0, start_time=0, stop_time=500)
+r.run_animated_plot(animated_plot1, 20.0, start_time=0, stop_time=500)

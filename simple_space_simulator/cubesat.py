@@ -5,40 +5,47 @@ import simple_space_simulator.physics as physics
 
 
 class State:
-    def __init__(self, x, y, z, dx, dy, dz, qw, qx, qy, qz, wx, wy, wz):
+    def __init__(self, x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw):
         """
-        Structure of the state vector (units are m and m/s)
-        x, y, z, dx, dy, dz
-        Rotation is expressed as theta as quaternion q (w, x, y, z)
+        Structure of the state vector (units are m, m/s, radians, radians/s)
+        x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw
         """
         assert isinstance(x, (int, float)) and isinstance(y, (int, float)) and isinstance(z, (int, float)), \
             "x y z must be int or float values"
         assert isinstance(dx, (int, float)) and isinstance(dy, (int, float)) and isinstance(dz, (int, float)), \
             "dx dy dz must be int or float values"
-        assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
-            isinstance(qy, (int, float)) and isinstance(qz, (int, float)), "qw qx qy qz must be int or float values"
-        assert isinstance(wx, (int, float)) and isinstance(wy, (int, float)) and isinstance(wz, (int, float)), \
-            "wx wy wz must be int or float values"
-        # contains the state as a cartesian state vector
-        self.state_vector = np.array([x, y, z, dx, dy, dz])
-        self.w = np.array([wx, wy, wz])
-        self.q = np.array([qw, qx, qy, qz])
+        assert isinstance(roll, (int, float)) and isinstance(droll, (int, float)) and \
+               isinstance(pitch, (int, float)) and isinstance(dpitch, (int, float)) and \
+               isinstance(yaw, (int, float)) and isinstance(dyaw, (int, float)), \
+               "roll, pitch, yaw and their derivatives must be floats or integers"
+
+        self.state_vector = np.array([x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw])
 
     def get_cartesian_state_vector(self):
         """
         Structure of the state vector (units are m and m/s)
         x, y, z, dx, dy, dz
         """
-        return self.state_vector
+        return self.state_vector[:6]
+
+    def get_ecef_position(self):
+        return self.state_vector[:3]
+
+    def get_orientation_euler(self):
+        return self.state_vector[6:9]
 
     def get_orientation_quaternion(self):
-        return self.q
+        orientation = self.get_orientation_euler()
+        return np.array(utils.euler_to_quaternion(orientation[0], orientation[1], orientation[2]))
 
     def get_orientation_quaternion_conjugate(self):
-        return utils.quaternion_conjugate(self.q)
+        return utils.quaternion_conjugate(self.get_orientation_quaternion())
+
+    def get_velocity_vector(self):
+        return self.state_vector[3:6]
 
     def get_angular_velocity_vector(self):
-        return self.w
+        return self.state_vector[9:12]
 
     def get_spherical_state_vector(self):
         """
@@ -48,7 +55,7 @@ class State:
         Good reference http://dynref.engr.illinois.edu/rvs.html
         https://physics.stackexchange.com/questions/546479/conversion-of-cartesian-position-and-velocity-to-spherical-velocity
         """
-        r = np.linalg.norm(self.state_vector[:3])
+        r = np.linalg.norm(self.get_ecef_position())
         theta = np.arctan2(self.get_y(), self.get_x())  # latitude
         phi = np.arccos(self.get_z() / r)  # longitude
 
@@ -77,6 +84,24 @@ class State:
 
     def get_dz(self):
         return self.state_vector[5]
+
+    def get_roll(self):
+        return self.state_vector[6]
+
+    def get_pitch(self):
+        return self.state_vector[7]
+
+    def get_yaw(self):
+        return self.state_vector[8]
+
+    def get_droll(self):
+        return self.state_vector[9]
+
+    def get_dpitch(self):
+        return self.state_vector[10]
+
+    def get_dyaw(self):
+        return self.state_vector[11]
 
     # Getter methods for spherical coordinates
     def get_r(self):
@@ -128,15 +153,20 @@ class State:
                           [-np.cos(lat) * np.cos(lon), -np.cos(lat) * np.sin(lon), -np.sin(lat)]])
         return np.dot(DCMef, vector)
 
-    def get_roll_pitch_yaw(self):
-        return utils.quaternion_to_euler_angle(self.q[0], self.q[1], self.q[2], self.q[3])
+    def __str__(self):
+        return str(self.state_vector)
 
 
-def state_from_vectors(state, q, w):
-    assert isinstance(state, np.ndarray) and state.ndim == 1, "state must be a vector"
-    assert isinstance(q, np.ndarray) and q.ndim == 1, "q must be a vector"
-    assert isinstance(w, np.ndarray) and w.ndim == 1, "w must be a vector"
-    return State(state[0], state[1], state[2], state[3], state[4], state[5], q[0], q[1], q[2], q[3], w[0], w[1], w[2])
+# def state_from_vectors(state, q, w):
+#     assert isinstance(state, np.ndarray) and state.ndim == 1, "state must be a vector"
+#     assert isinstance(q, np.ndarray) and q.ndim == 1, "q must be a vector"
+#     assert isinstance(w, np.ndarray) and w.ndim == 1, "w must be a vector"
+#     return State(state[0], state[1], state[2], state[3], state[4], state[5], q[0], q[1], q[2], q[3], w[0], w[1], w[2])
+
+
+def state_from_vector(v):
+    # v is [x, y, z, dx, dy, dz, r, p y, wr, wp, wy]
+    return State(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11])
 
 
 """

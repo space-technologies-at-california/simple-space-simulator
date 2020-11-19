@@ -79,6 +79,8 @@ class SphericalPlot(SimPlot):
 
         ax2 = ax.twinx()
         lns3 = ax2.plot(time_stamps, r, color="red", label='radius')
+        # this gives a better sense of scale for r by removing very small values
+        ax2.set_ylim(ax2.get_ylim()[0] - 1, ax2.get_ylim()[1] + 1)
 
         lns = lns1 + lns2 + lns3
         labels = [ln.get_label() for ln in lns]
@@ -104,6 +106,8 @@ class SphericalVelocityPlot(SimPlot):
 
         ax2 = ax.twinx()
         lns3 = ax2.plot(time_stamps, r, color="red", label='dr')
+        # this gives a better sense of scale for dr by removing very small values
+        ax2.set_ylim(ax2.get_ylim()[0] - 0.1, ax2.get_ylim()[1] + 0.1)
 
         lns = lns1 + lns2 + lns3
         labels = [ln.get_label() for ln in lns]
@@ -201,7 +205,7 @@ class OrientationPlot(SimPlot):
     def build(self, states, time_stamps, ax):
         X, Y, Z = [], [], []
         for state in states:
-            x, y, z = state.get_roll_pitch_yaw()
+            x, y, z = utils.quaternion_to_euler_angle(*state.get_orientation_quaternion())
             X.append(x)
             Y.append(y)
             Z.append(z)
