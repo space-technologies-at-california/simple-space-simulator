@@ -86,7 +86,7 @@ class Simulator:
     def sample(self, t, y):
         """
         Takes in the time and state vector y and returns the derivative at that point
-        to be used by an integrate such as scipy ivp_solver.
+        to be used by an integrator such as scipy ivp_solver.
 
         State vector: (x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw)
         """
@@ -95,13 +95,15 @@ class Simulator:
         angular_acceleration = self.compute_angular_accelerations(state)*0
 
         # https://www.euclideanspace.com/physics/kinematics/angularvelocity/
-        R = transform.Rotation.from_euler('xyz', state.get_orientation_euler()).inv()
+        # http://www.mare.ee/indrek/varphi/vardyn.pdf
+        # https://arxiv.org/pdf/0811.2889.pdf
+        R = transform.Rotation.from_euler('xyz', state.get_orientation_euler())
         # angular velocity in the ecef frame
-        angular_velocity = R.apply(state.get_angular_velocity_vector())
+        deuler = R.apply(state.get_angular_velocity_vector())
 
         return (*state.get_velocity_vector(),
                 *acceleration,
-                *angular_velocity,
+                *deuler,
                 *angular_acceleration)
 
     def step(self, start=0, stop=5000, sample_resolution=10):

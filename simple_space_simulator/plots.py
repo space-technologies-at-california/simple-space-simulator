@@ -224,27 +224,36 @@ class OrientationPlot(SimPlot):
 
 class AngularVelocityPlot(SimPlot):
     """
-    This plot plots the orientation of the satellite itself
+    This plot plots the angular velocity of the satellite and the angular momentum
     """
+    def __init__(self, cubesat):
+        super().__init__()
+        self.cubesat = cubesat
 
     def build(self, states, time_stamps, ax):
         X, Y, Z = [], [], []
+        angular_momentum = []
         for state in states:
-            x, y, z = state.get_angular_velocity_vector()
-            X.append(x)
-            Y.append(y)
-            Z.append(z)
-
-        ax.plot(time_stamps, X, color="red", label='v roll')
-        ax.plot(time_stamps, Y, color="green", label='v pitch')
-        ax.plot(time_stamps, Z, color="blue", label='v yaw')
+            w = state.get_angular_velocity_vector()
+            X.append(w[0])
+            Y.append(w[1])
+            Z.append(w[2])
+            angular_momentum.append(np.sum(np.dot(self.cubesat.inertia, w)))
 
         ax.set_title("Angular Velocity Plot")
         ax.set_xlabel("time (s)")
         ax.set_ylabel("radians / s")
 
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels)
+        lns1 = ax.plot(time_stamps, X, color="red", label='v roll')
+        lns2 = ax.plot(time_stamps, Y, color="green", label='v pitch')
+        lns3 = ax.plot(time_stamps, Z, color="blue", label='v yaw')
+
+        ax2 = ax.twinx()
+        lns4 = ax2.plot(time_stamps, angular_momentum, color="orange", label='angular momentum')
+
+        lns = lns1 + lns2 + lns3 + lns4
+        labels = [ln.get_label() for ln in lns]
+        ax.legend(lns, labels)
 
 
 class MagneticFieldPlot(SimPlot):
