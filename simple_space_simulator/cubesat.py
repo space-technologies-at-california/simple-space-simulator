@@ -40,7 +40,7 @@ class State:
         return transform.Rotation.from_quat([quat[1], quat[2], quat[3], quat[0]]).as_euler('xyz')
 
     def get_orientation_quaternion(self):
-        return self.state_vector[6:10]
+        return self.state_vector[6:10] / np.linalg.norm(self.state_vector[6:10])
 
     def get_orientation_quaternion_conjugate(self):
         return utils.quaternion_conjugate(self.get_orientation_quaternion())
