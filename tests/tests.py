@@ -18,17 +18,17 @@ class TestSimpleOrbit(unittest.TestCase):
         # Standard simulator code
         qubesat = cubesat.Cubesat(1, length=0.1, width=0.1, height=0.1)
         planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)
-        vx, vy, vz = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(altitude), 0)
-        qw, qx, qy, qz = utils.euler_to_quaternion(0, 0, 0)
-        state = cubesat.State(altitude + constants.R_EARTH, 0, 0, vx, vy, vz, qw, qx, qy, qz, 0.001,
-                              0.000, 0.000)
-        simulator = physics.Simulator(qubesat, planet, state, time_per_step)
+        v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(altitude), 0)
+        q_init = utils.euler_to_quaternion(0, 0, 0)
+        dq_init = utils.angular_velocity_to_dquaternion([0.0, 0.0, 0.0], q_init)
+
+        initial_state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
+        simulator = physics.Simulator(qubesat, planet, initial_state, 10)
         simulator.add_accelerator(
             lambda s, c, p: planet.get_gravitational_acceleration(s))
 
-        def stop_condition(states, times): return len(states) >= int(steps_per_orbit)
-        r = renderer.Renderer()
-        r.run(simulator, stop_condition)
+        r = renderer.Renderer(resolution=1)
+        r.run(simulator, stop_time=int(utils.orbital_period(constants.ISS_ALTITUDE)))
         return r
 
     def test_incline_0_orbit(self):
@@ -48,7 +48,7 @@ class TestSimpleOrbit(unittest.TestCase):
         # Tests
         self.assertLess(abs(orbital_period - 5600), 50, msg='Correct orbital period of ISS +- 50s')
         self.assertEqual(steps_per_orbit, int(orbital_period / time_per_step), msg='Correct number of steps computed')
-        self.assertEqual(len(r.states), int(steps_per_orbit), 'Correct number of steps taken')
+        self.assertEqual(int(r.time_stamps[-1]), int(orbital_period), 'Correct simulation duration')
 
         error = r.states[-1].get_cartesian_state_vector() - r.states[0].get_cartesian_state_vector()
         self.assertLess(abs(error[0]), 10000, 'Error in x less than 10,000')

@@ -1,11 +1,12 @@
 import numpy as np
 import math
+import scipy.spatial.transform as transform
 import simple_space_simulator.utils as utils
 import simple_space_simulator.physics as physics
 
 
 class State:
-    def __init__(self, x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw):
+    def __init__(self, x, y, z, dx, dy, dz, qw, qx, qy, qz, dqw, dqx, dqy, dqz):
         """
         Structure of the state vector (units are m, m/s, radians, radians/s)
         x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw
@@ -14,12 +15,15 @@ class State:
             "x y z must be int or float values"
         assert isinstance(dx, (int, float)) and isinstance(dy, (int, float)) and isinstance(dz, (int, float)), \
             "dx dy dz must be int or float values"
-        assert isinstance(roll, (int, float)) and isinstance(droll, (int, float)) and \
-               isinstance(pitch, (int, float)) and isinstance(dpitch, (int, float)) and \
-               isinstance(yaw, (int, float)) and isinstance(dyaw, (int, float)), \
-               "roll, pitch, yaw and their derivatives must be floats or integers"
+        assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
+               isinstance(qy, (int, float)) and isinstance(qz, (int, float)) and \
+               np.linalg.norm(np.array([qw, qx, qy, qz])) - 1.0 < 0.1, \
+               "orientation quaternion must be composed of int and floats and have norm near one"
+        assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
+               isinstance(qy, (int, float)) and isinstance(qz, (int, float)), \
+               "orientation derivative must contain integers or floats"
 
-        self.state_vector = np.array([x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw])
+        self.state_vector = np.array([x, y, z, dx, dy, dz, qw, qx, qy, qz, dqw, dqx, dqy, dqz])
 
     def get_cartesian_state_vector(self):
         """
@@ -32,20 +36,24 @@ class State:
         return self.state_vector[:3]
 
     def get_orientation_euler(self):
-        return self.state_vector[6:9]
+        quat = self.get_orientation_quaternion()
+        return transform.Rotation.from_quat([quat[1], quat[2], quat[3], quat[0]]).as_euler('xyz')
 
     def get_orientation_quaternion(self):
-        orientation = self.get_orientation_euler()
-        return np.array(utils.euler_to_quaternion(orientation[0], orientation[1], orientation[2]))
+        return self.state_vector[6:10]
 
     def get_orientation_quaternion_conjugate(self):
         return utils.quaternion_conjugate(self.get_orientation_quaternion())
+
+    def get_quaternion_derivative(self):
+        return self.state_vector[10:14]
 
     def get_velocity_vector(self):
         return self.state_vector[3:6]
 
     def get_angular_velocity_vector(self):
-        return self.state_vector[9:12]
+        return utils.quaternion_multiply(self.get_orientation_quaternion_conjugate(),
+                                         2*self.get_quaternion_derivative())[1:]
 
     def get_spherical_state_vector(self):
         """
@@ -86,22 +94,22 @@ class State:
         return self.state_vector[5]
 
     def get_roll(self):
-        return self.state_vector[6]
+        return self.get_orientation_euler()[0]
 
     def get_pitch(self):
-        return self.state_vector[7]
+        return self.get_orientation_euler()[1]
 
     def get_yaw(self):
-        return self.state_vector[8]
+        return self.get_orientation_euler()[2]
 
     def get_droll(self):
-        return self.state_vector[9]
+        return self.get_angular_velocity_vector()[0]
 
     def get_dpitch(self):
-        return self.state_vector[10]
+        return self.get_angular_velocity_vector()[1]
 
     def get_dyaw(self):
-        return self.state_vector[11]
+        return self.get_angular_velocity_vector()[2]
 
     # Getter methods for spherical coordinates
     def get_r(self):
@@ -157,16 +165,9 @@ class State:
         return str(self.state_vector)
 
 
-# def state_from_vectors(state, q, w):
-#     assert isinstance(state, np.ndarray) and state.ndim == 1, "state must be a vector"
-#     assert isinstance(q, np.ndarray) and q.ndim == 1, "q must be a vector"
-#     assert isinstance(w, np.ndarray) and w.ndim == 1, "w must be a vector"
-#     return State(state[0], state[1], state[2], state[3], state[4], state[5], q[0], q[1], q[2], q[3], w[0], w[1], w[2])
-
-
 def state_from_vector(v):
     # v is [x, y, z, dx, dy, dz, r, p y, wr, wp, wy]
-    return State(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11])
+    return State(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12], v[13])
 
 
 """
