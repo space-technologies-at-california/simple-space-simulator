@@ -103,9 +103,14 @@ Quaternion helper functions
 """
 
 
+def angular_velocity_to_dquaternion(w, q):
+    w = np.array([0, *w])
+    return 1 / 2 * quaternion_multiply(q, w)
+
+
 def quaternion_multiply(quaternion1, quaternion0):
-    assert isinstance(quaternion1, np.ndarray) and quaternion1.ndim == 1, "quaternion1 must be a vector"
-    assert isinstance(quaternion0, np.ndarray) and quaternion0.ndim == 1, "quaternion0 must be a vector"
+    assert len(quaternion1) == 4, "quaternion1 must be a tuple/list/vector of length 4"
+    assert len(quaternion0) == 4, "quaternion0 must be a tuple/list/vector of length 4"
     w0, x0, y0, z0 = quaternion0
     w1, x1, y1, z1 = quaternion1
     return np.array([-x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0,
@@ -143,7 +148,7 @@ def euler_to_quaternion(roll, pitch, yaw):
     qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2)
     qw = np.cos(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
 
-    return qw, qx, qy, qz
+    return np.array([qw, qx, qy, qz])
 
 
 def quaternion_to_euler_angle_vectorized2(w, x, y, z):
@@ -166,14 +171,14 @@ def quaternion_to_euler_angle_vectorized2(w, x, y, z):
 
 
 def quaternion_conjugate(q):
-    assert isinstance(q, np.ndarray) and q.ndim == 1, "q must be a vector"
-    return np.array([q[0], -q[1], -q[2], -q[3]])
+    assert len(q) == 4, "q must be a tuple/list/vector of length 4"
+    return np.array([q[0], -q[1], -q[2], -q[3]], np.float64)
 
 
 # rotate v (x,y,z) by q (w,x,y,z)
 def quaternion_rotate(q, v):
-    assert isinstance(q, np.ndarray) and q.ndim == 1, "q must be a vector"
-    assert isinstance(v, np.ndarray) and v.ndim == 1, "v must be a vector"
+    assert len(q) == 4, "q must be a tuple/list/vector of length 4"
+    assert len(v) == 3, "v must be a tuple/list/vector of length 3"
     return quaternion_multiply(quaternion_multiply(q, np.append([0], v)), quaternion_conjugate(q))[1:]
 
 

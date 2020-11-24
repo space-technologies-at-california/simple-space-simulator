@@ -1,8 +1,7 @@
 import numpy as np
 import pyIGRF
 import scipy.integrate as integrate
-import scipy.spatial.transform as transform
-
+import simple_space_simulator.utils as utils
 import simple_space_simulator.cubesat as cube
 from simple_space_simulator import constants
 
@@ -92,17 +91,27 @@ class Simulator:
         """
         state = cube.state_from_vector(y)
         acceleration = self.compute_lateral_accelerations(state)
-        angular_acceleration = self.compute_angular_accelerations(state)*0
+        angular_acceleration = self.compute_angular_accelerations(state)
 
-        # https://www.euclideanspace.com/physics/kinematics/angularvelocity/
-        R = transform.Rotation.from_euler('xyz', state.get_orientation_euler()).inv()
-        # angular velocity in the ecef frame
-        angular_velocity = R.apply(state.get_angular_velocity_vector())
+        """
+        Quaternion Reference Material (also see)
+
+        Rotations https://www.euclideanspace.com/physics/kinematics/angularvelocity/
+        Quaternions for rotational dynamics https://arxiv.org/pdf/0811.2889.pdf
+        https://math.stackexchange.com/questions/1896379/how-to-use-the-quaternion-derivative
+        https://math.stackexchange.com/questions/39553/how-do-i-apply-an-angular-velocity-vector3-to-a-unit-quaternion-orientation
+        https://math.stackexchange.com/questions/1792826/estimate-angular-velocity-and-acceleration-from-a-sequence-of-rotations
+        http://www.mare.ee/indrek/varphi/vardyn.pdf
+        """
+
+        dquat = state.get_quaternion_derivative()
+        ddquat = 1/2 * (utils.quaternion_multiply(dquat, [0, *state.get_angular_velocity_vector()]) +
+                        utils.quaternion_multiply(state.get_orientation_quaternion(), [0, *angular_acceleration]))
 
         return (*state.get_velocity_vector(),
                 *acceleration,
-                *angular_velocity,
-                *angular_acceleration)
+                *dquat,
+                *ddquat)
 
     def step(self, start=0, stop=5000, sample_resolution=10):
         """
