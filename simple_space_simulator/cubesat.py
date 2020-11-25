@@ -179,6 +179,9 @@ class SensorDevice:
     def __init__(self):
         pass
 
+    def attach(self, cubesat, location):
+        pass
+
 
 """
 TODO Control Devices
@@ -187,6 +190,9 @@ TODO Control Devices
 
 class ControlDevice:
     def __init__(self):
+        pass
+
+    def attach(self, cubesat):
         pass
 
 

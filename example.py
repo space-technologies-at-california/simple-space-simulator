@@ -19,17 +19,19 @@ planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, rad
 """
 Step 2: Configure the initial state of the cubesat in the simulation
 """
-inclination = 0
+inclination = float(np.radians(41))
+altitude = 500000
+print("Starting inclination:", np.degrees(inclination), " Starting altitude: ", altitude)
 max_step_size = 10
 
-v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(constants.ISS_ALTITUDE), inclination)
+v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(altitude), inclination)
 
 # roll, pitch, yaw are defined referenced to ecef, droll, dpitch, dyaw are body rates
 # r, p, y and dr, dp, dyaw are converted to quaternion with the following two functions
 q_init = utils.euler_to_quaternion(0, 0, 0)
 dq_init = utils.angular_velocity_to_dquaternion([0.01, 0.0, 0.01], q_init)
 
-initial_state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
+initial_state = cubesat.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
 simulator = physics.Simulator(qubesat, planet, initial_state, max_step_size)
 
 """
@@ -54,7 +56,7 @@ simulator.add_torquer(magnetic_torques)
 Step 4: Configure the stop condition for the simulation. Run the simulation with the desired renderer
 """
 r = renderer.Renderer(resolution=1)
-r.run(simulator, stop_time=int(utils.orbital_period(constants.ISS_ALTITUDE)))
+r.run(simulator, stop_time=int(utils.orbital_period(altitude)))
 
 """
 Step 5: Choose the plots you want to display after running the simulation
@@ -69,7 +71,7 @@ plot4 = plots.SphericalVelocityPlot()
 r.add_plot(plot4)
 plot5 = plots.OrbitalPlot2D(planet, inclination=inclination)
 r.add_plot(plot5)
-plot6 = plots.OrbitalPlot3D(planet, show_magnetic_field=True, show_planet=False)
+plot6 = plots.OrbitalPlot3D(planet, show_magnetic_field=True, show_planet=True)
 r.add_plot(plot6)
 plot7 = plots.OrientationPlot()
 r.add_plot(plot7)

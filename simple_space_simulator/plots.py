@@ -142,7 +142,7 @@ class OrbitalPlot3D(SimPlot):
             x = R * np.sin(theta) * np.cos(phi)
             y = R * np.sin(theta) * np.sin(phi)
             z = R * np.cos(theta)
-            ax.plot_surface(x.T, y.T, z.T, cstride=1, rstride=1)  # we've already pruned ourselves
+            ax.plot_surface(x.T, y.T, z.T, cstride=1, rstride=1, alpha=0.7)
 
         if self.show_magnetic_field:
             for i in range(0, len(states), len(states) // 10):
