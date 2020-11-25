@@ -19,9 +19,9 @@ planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, rad
 """
 Step 2: Configure the initial state of the cubesat in the simulation
 """
-inclination = float(np.radians(41))
-altitude = 500000
-print("Starting inclination:", np.degrees(inclination), " Starting altitude: ", altitude)
+inclination = constants.ISS_INCLINATION
+altitude = constants.ISS_ALTITUDE
+print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
 max_step_size = 10
 
 v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(altitude), inclination)
