@@ -14,7 +14,7 @@ class Renderer:
     def run(self, simulator, stop_time, start_time=0):
         assert isinstance(simulator, physics.Simulator), "simulator must be a Simulator object"
         assert isinstance(stop_time, (int, float)) and stop_time > 0, "stop time must be a float or int > 0"
-        self.time_stamps, self.states = simulator.step(start_time, stop_time, self.resolution)
+        self.time_stamps, self.states = simulator.run(start_time, stop_time, self.resolution)
         completion_msg = "Simulation Complete \n" \
                          "{0} seconds \n" \
                          "{1} minutes \n" \

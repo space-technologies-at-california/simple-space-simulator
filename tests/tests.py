@@ -3,8 +3,10 @@ import unittest
 import simple_space_simulator.physics as physics
 from simple_space_simulator import constants
 import simple_space_simulator.cubesat as cubesat
+import simple_space_simulator.state as state
 import simple_space_simulator.renderer as renderer
 import simple_space_simulator.utils as utils
+import simple_space_simulator.components as components
 
 
 class TestSimpleOrbit(unittest.TestCase):
@@ -15,14 +17,15 @@ class TestSimpleOrbit(unittest.TestCase):
         assert isinstance(steps_per_orbit, (int, float)) and steps_per_orbit > 0, \
             "steps_per_orbit must be a positive value"
         assert isinstance(inclination, (int, float)), "inclination must be a radian value"
-        # Standard simulator code
-        qubesat = cubesat.Cubesat(1, length=0.1, width=0.1, height=0.1)
+        qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(),
+                                  state_estimator=components.SimpleStateEstimator(),
+                                  length=0.2, width=0.2, height=0.4)
         planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)
         v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(altitude), 0)
         q_init = utils.euler_to_quaternion(0, 0, 0)
         dq_init = utils.angular_velocity_to_dquaternion([0.0, 0.0, 0.0], q_init)
 
-        initial_state = cubesat.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
+        initial_state = state.State(constants.ISS_ALTITUDE + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
         simulator = physics.Simulator(qubesat, planet, initial_state, 10)
         simulator.add_accelerator(
             lambda s, c, p: planet.get_gravitational_acceleration(s))

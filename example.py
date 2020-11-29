@@ -6,14 +6,35 @@ import simple_space_simulator.cubesat as cubesat
 import simple_space_simulator.renderer as renderer
 import simple_space_simulator.plots as plots
 import simple_space_simulator.utils as utils
+import simple_space_simulator.components as components
+import simple_space_simulator.state as state
 
 """
 Step 1: Define the cubesat and planet specifications
 """
-qubesat = cubesat.Cubesat(1, length=0.2, width=0.2, height=0.4)  # mass in kg, length, width, height in m
+# mass in kg, length, width, height in m
+qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(),
+                          state_estimator=components.SimpleStateEstimator(),
+                          length=0.2, width=0.2, height=0.4)
 
-static_dipole = np.array([0, 0, 0])  # dipole in tesla referenced from the cubesat frame
-qubesat.add_magnetic_dipole(static_dipole)
+# Define the components that will be added to the satellite
+lsm9ds1 = components.SimpleIMU(position=(0, 0, 0), orientation=(0, 0, 0), id='imu', cubesat=qubesat)
+magnetorquer_x = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='mx',
+                                                       cubesat=qubesat, number_of_loops=10, area=0.5)
+magnetorquer_y = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='my',
+                                                       cubesat=qubesat, number_of_loops=10, area=0.5)
+magnetorquer_z = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='mz',
+                                                       cubesat=qubesat, number_of_loops=10, area=0.5)
+
+qubesat.add_sensor(lsm9ds1)
+qubesat.add_actuator(magnetorquer_x)
+qubesat.add_actuator(magnetorquer_y)
+qubesat.add_actuator(magnetorquer_z)
+
+# dipole in tesla referenced from the cubesat frame
+qubesat.add_static_magnetic_dipole(np.array([0, 0, 0]))
+
+# define planet specification
 planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, radius in meters
 
 """
@@ -21,8 +42,9 @@ Step 2: Configure the initial state of the cubesat in the simulation
 """
 inclination = constants.ISS_INCLINATION
 altitude = constants.ISS_ALTITUDE
+max_step_size = 0.1
+
 print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
-max_step_size = 10
 
 v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(altitude), inclination)
 
@@ -31,7 +53,7 @@ v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(a
 q_init = utils.euler_to_quaternion(0, 0, 0)
 dq_init = utils.angular_velocity_to_dquaternion([0.01, 0.0, 0.01], q_init)
 
-initial_state = cubesat.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
+initial_state = state.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
 simulator = physics.Simulator(qubesat, planet, initial_state, max_step_size)
 
 """
@@ -41,25 +63,19 @@ inputs are <state, cubesat, planet>
 # Acceleration due to the planet
 simulator.add_accelerator(lambda s, c, p: planet.get_gravitational_acceleration(s))
 
+"""
+Step 4: Write the state estimation and control objects
+"""
 
-# Angular torque due to the magnetic field
-# https://docs.google.com/document/d/1H6u0sJonnc3Cq24zajG50wIkeIDk1tscy8mXIZIa8WQ/edit
-def magnetic_torques(s, c, p):
-    field = p.get_magnetic_field(s)
-    t = np.cross(c.get_magnetic_dipole(s), field)
-    return t
-
-
-simulator.add_torquer(magnetic_torques)
 
 """
-Step 4: Configure the stop condition for the simulation. Run the simulation with the desired renderer
+Step 5: Configure the stop condition for the simulation. Run the simulation with the desired renderer
 """
 r = renderer.Renderer(resolution=1)
 r.run(simulator, stop_time=int(utils.orbital_period(altitude)))
 
 """
-Step 5: Choose the plots you want to display after running the simulation
+Step 6: Choose the plots you want to display after running the simulation
 """
 plot1 = plots.CartesianPlot()
 r.add_plot(plot1)
@@ -81,12 +97,12 @@ plot9 = plots.MagneticFieldPlot(planet)
 r.add_plot(plot9)
 
 """
-Step 6: Display all the plots
+Step 7: Display all the plots
 """
 r.render(figsize=(5, 7), columns=4)
 
 """
-Step 7: Run any animated plots
+Step 8: Run any animated plots
 """
 animated_plot1 = plots.OrientationPlotAnimated(qubesat)
 r.run_animated_plot(animated_plot1, 20.0, start_time=0, stop_time=500)

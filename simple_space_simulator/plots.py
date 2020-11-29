@@ -340,10 +340,12 @@ class OrientationPlotAnimated(AnimatedPlot):
         self.z_quiver = self.ax.quiver(0, 0, 0, z[0], z[1], z[2], color='blue')
 
     def update_magnetic_dipoles(self, state):
-        self.cubesat_magnetic_dipole.remove()
-        cubesat_dipole = self.cubesat.get_magnetic_dipole(state)
-        self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, cubesat_dipole[0], cubesat_dipole[1], cubesat_dipole[2],
-                                                      color='purple')
+        # Needs to be re-implimented to deal with internal state history
+        pass
+        # self.cubesat_magnetic_dipole.remove()
+        # cubesat_dipole = self.cubesat.get_static_magnetic_dipole(state)
+        # self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, cubesat_dipole[0], cubesat_dipole[1],
+        # cubesat_dipole[2], color='purple')
 
     def update(self):
         for state, time in zip(self.states, self.time_stamps):

@@ -3,6 +3,7 @@ import pyIGRF
 import scipy.integrate as integrate
 import simple_space_simulator.utils as utils
 import simple_space_simulator.cubesat as cube
+from simple_space_simulator.state import State, state_from_vector
 from simple_space_simulator import constants
 
 
@@ -12,7 +13,7 @@ class Simulator:
     the interactions with multiple forcers, torquers, and accelerators
     """
 
-    def __init__(self, cubesat, planet, state, max_step=10):
+    def __init__(self, cubesat, planet, initial_state, max_step=10):
         """
         Parameters
         ----------
@@ -20,7 +21,7 @@ class Simulator:
             The orbiting cubesat object
         planet : Planet
             The planet that the cubesat object will be orbiting
-        state : State
+        initial_state : State
             Initial state of the simulation
         max_step : float, optional
             The time between steps of the simulation
@@ -32,13 +33,21 @@ class Simulator:
         """
         assert isinstance(cubesat, cube.Cubesat), "cubesat must be a Cubesat object"
         assert isinstance(planet, Planet), "planet must be a Planet object"
-        assert isinstance(state, cube.State), "state must be a State object"
-        assert isinstance(max_step, int) and max_step > 0, "max step must be a positive integer"
-        self.max_step = max_step
-        self.cubesat = cubesat
+        assert isinstance(initial_state, State), "state must be a State object"
+        assert isinstance(max_step, (int, float)) and max_step > 0, "max step must be a positive float or integer"
+
         self.planet = planet
-        self.elapsed_time = 0
-        self.state = state
+        self.cubesat = cubesat
+        # reset the cubesat internal state of cubesat
+        self.cubesat.reset()
+
+        self.max_step = max_step
+        self.initial_state = initial_state
+
+        """
+        Define all the external actors on the cubesat including magnetic field, solar radiation pressure, air drag,
+        gravitational gradient torque
+        """
         # functions that take in a state and returns a force vector <Fx,Fy,Fz> acting on the COM of the cubesat
         self.forces = []
         # functions that take in a state and returns an acceleration vector <ax,ay,az> acting on the COM of the cubesat
@@ -50,33 +59,29 @@ class Simulator:
         # around the COM
         self.angular_accelerations = []
 
-    def compute_lateral_accelerations(self, state=None):
-        if state is None:
-            state = self.state
+    def compute_lateral_accelerations(self, s):
 
         net_force = np.zeros(3)
         for forcer in self.forces:
-            net_force += forcer(state, self.cubesat, self.planet)
+            net_force += forcer(s, self.cubesat, self.planet)
 
         net_acc = np.zeros(3)
         for accelerator in self.accelerations:
-            net_acc += accelerator(state, self.cubesat, self.planet)
+            net_acc += accelerator(s, self.cubesat, self.planet)
 
         net_acc += net_force / self.cubesat.mass
 
         return net_acc
 
-    def compute_angular_accelerations(self, state=None):
-        if state is None:
-            state = self.state
+    def compute_angular_accelerations(self, s):
 
         net_torque = np.zeros(3)
         for torquer in self.torques:
-            net_torque += torquer(state, self.cubesat, self.planet)
+            net_torque += torquer(s, self.cubesat, self.planet)
 
         net_angular_acc = np.zeros(3)
         for angular_accelerator in self.angular_accelerations:
-            net_angular_acc += angular_accelerator(state, self.cubesat, self.planet)
+            net_angular_acc += angular_accelerator(s, self.cubesat, self.planet)
 
         net_angular_acc += np.dot(self.cubesat.inertia_inv, net_torque)
 
@@ -89,31 +94,36 @@ class Simulator:
 
         State vector: (x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw)
         """
-        state = cube.state_from_vector(y)
-        acceleration = self.compute_lateral_accelerations(state)
-        angular_acceleration = self.compute_angular_accelerations(state)
+        # print progress update if correct time has elapsed
+        if t - self.last_t > 10:
+            print("\rSimulation progress: {:.2f}%".format(t / (self.stop - self.start) * 100), end="")
 
-        """
-        Quaternion Reference Material (also see)
+        external_state = state_from_vector(y)
 
-        Rotations https://www.euclideanspace.com/physics/kinematics/angularvelocity/
-        Quaternions for rotational dynamics https://arxiv.org/pdf/0811.2889.pdf
-        https://math.stackexchange.com/questions/1896379/how-to-use-the-quaternion-derivative
-        https://math.stackexchange.com/questions/39553/how-do-i-apply-an-angular-velocity-vector3-to-a-unit-quaternion-orientation
-        https://math.stackexchange.com/questions/1792826/estimate-angular-velocity-and-acceleration-from-a-sequence-of-rotations
-        http://www.mare.ee/indrek/varphi/vardyn.pdf
-        """
+        # 1. Compute the external accelerations
+        external_acc = self.compute_lateral_accelerations(external_state)
+        external_angular_acc = self.compute_angular_accelerations(external_state)
 
-        dquat = state.get_quaternion_derivative()
-        ddquat = 1/2 * (utils.quaternion_multiply(dquat, [0, *state.get_angular_velocity_vector()]) +
-                        utils.quaternion_multiply(state.get_orientation_quaternion(), [0, *angular_acceleration]))
+        # 2. Compute the internal / commanded accelerations
+        internal_acc, internal_angular_acc = self.cubesat(t, external_state, external_acc, external_angular_acc,
+                                                          self.planet.get_magnetic_field(external_state))
 
-        return (*state.get_velocity_vector(),
-                *acceleration,
+        # 3. Sum external and internal accelerations
+        total_acc, total_angular_acc = external_acc + internal_acc, external_angular_acc + internal_angular_acc
+
+        # 4. Quaternion computations for integrating orientation
+        # see experimentation/dynamics_modeling.ipynb for resources on quaternions and integrating orientation
+        dquat = external_state.get_quaternion_derivative()
+        ddquat = 1 / 2 * (utils.quaternion_multiply(dquat, [0, *external_state.get_angular_velocity_vector()]) +
+                          utils.quaternion_multiply(external_state.get_orientation_quaternion(),
+                                                    [0, *total_angular_acc]))
+
+        return (*external_state.get_velocity_vector(),
+                *total_acc,
                 *dquat,
                 *ddquat)
 
-    def step(self, start=0, stop=5000, sample_resolution=10):
+    def run(self, start=0, stop=5000, sample_resolution=10):
         """
         Computes the states from the current time step at t start to the state a t stop using
          Runge-Kutta 45 (ode45) with scipy ivp.
@@ -124,15 +134,21 @@ class Simulator:
         """
 
         # Good reference: https://www.marksmath.org/visualization/orbits/CentralOrbit.html
+        # we set atol and rtol to large values so that the max step size is always taken
+        # Note that default values are 1e-3 for rtol and 1e-6 for atol.
+        self.stop, self.start, self.last_t = stop, start, start
         sol = integrate.solve_ivp(
             self.sample,
             (start, stop),
-            self.state.state_vector,
-            t_eval=np.linspace(start, stop, (stop - start) * sample_resolution),
-            max_step=self.max_step)
+            self.initial_state.state_vector,
+            t_eval=np.linspace(start, self.stop, (self.stop - self.start) * sample_resolution),
+            max_step=self.max_step,
+            atol=1,
+            rtol=1)
+        print("\n---")
 
         # Convert state arrays into state objects for easier manipulation
-        states = [cube.state_from_vector(y) for y in sol.y.T]
+        states = [state_from_vector(y) for y in sol.y.T]
         return sol.t, states
 
     def add_forcer(self, forcer):
@@ -161,13 +177,13 @@ class Planet:
         self.magnetic_field_model = magnetic_field_model
 
     def get_gravitational_acceleration(self, state):
-        assert isinstance(state, cube.State), "state must be a State object"
+        assert isinstance(state, State), "state must be a State object"
         r_hat = state.state_vector[:3] / np.linalg.norm(state.state_vector[:3])
         a = -constants.G * self.mass / np.linalg.norm(state.state_vector[:3]) ** 2 * r_hat
         return a
 
     def get_magnetic_field(self, state, ecef=True):
-        assert isinstance(state, cube.State), "state must be a State object"
+        assert isinstance(state, State), "state must be a State object"
         assert isinstance(ecef, bool), "ecef must be a boolean"
         # D: declination (+ve east)
         # I: inclination (+ve down)
