@@ -226,25 +226,35 @@ class AngularVelocityPlot(SimPlot):
     """
     This plot plots the orientation of the satellite itself
     """
+    def __init__(self, cubesat):
+        super().__init__()
+        self.cubesat = cubesat
 
     def build(self, states, time_stamps, ax):
         X, Y, Z = [], [], []
+        momentum = []
         for state in states:
             x, y, z = state.get_angular_velocity_vector()
             X.append(x)
             Y.append(y)
             Z.append(z)
+            momentum.append(np.linalg.norm(np.dot(self.cubesat.inertia, state.get_angular_velocity_vector())))
 
-        ax.plot(time_stamps, X, color="red", label='v roll')
-        ax.plot(time_stamps, Y, color="green", label='v pitch')
-        ax.plot(time_stamps, Z, color="blue", label='v yaw')
+        lns1 = ax.plot(time_stamps, X, color="red", label='v roll')
+        lns2 = ax.plot(time_stamps, Y, color="green", label='v pitch')
+        lns3 = ax.plot(time_stamps, Z, color="blue", label='v yaw')
+
+        ax2 = ax.twinx()
+        ax2.set_ylabel("kg * m^2 / s")
+        lns4 = ax2.plot(time_stamps, momentum, color="yellow", label='angular momentum')
 
         ax.set_title("Angular Velocity Plot")
         ax.set_xlabel("time (s)")
         ax.set_ylabel("radians / s")
 
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels)
+        lns = lns1 + lns2 + lns3 + lns4
+        labels = [ln.get_label() for ln in lns]
+        ax.legend(lns, labels)
 
 
 class MagneticFieldPlot(SimPlot):
@@ -273,6 +283,31 @@ class MagneticFieldPlot(SimPlot):
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
 
+class MagneticFieldPlot(SimPlot):
+    """
+    This plot plots the strength of the x, y, and z components of the magnetic field in tesla
+    """
+
+    def __init__(self, planet):
+        super().__init__()
+        self.planet = planet
+
+    def build(self, states, time_stamps, ax):
+        x, y, z = [], [], []
+        for state in states:
+            field = self.planet.get_magnetic_field(state)
+            x.append(field[0])
+            y.append(field[1])
+            z.append(field[2])
+        ax.plot(time_stamps, x, color="red", label='x')
+        ax.plot(time_stamps, y, color="green", label='y')
+        ax.plot(time_stamps, z, color="blue", label='z')
+        ax.set_title("Magnetic Field Plot")
+        ax.set_xlabel("time (s)")
+        ax.set_ylabel("field strength (T)")
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels)
 
 """
 Animated plots
@@ -287,7 +322,7 @@ class AnimatedPlot(SimPlot, ABC):
 
 
 class OrientationPlotAnimated(AnimatedPlot):
-    def __init__(self, cubesat, draw_axes=True, draw_magnetic_dipoles=True):
+    def __init__(self, cubesat, rtf_multiplier=10, draw_axes=True, draw_magnetic_dipoles=True):
         super().__init__(is_3d=True)
         self.cubesat = cubesat
         self.draw_axes = draw_axes
@@ -295,6 +330,10 @@ class OrientationPlotAnimated(AnimatedPlot):
         self.collection = Poly3DCollection(
             utils.points_to_verts(self.cubesat.points), facecolors='grey',
             linewidths=1, edgecolors='black', alpha=0.6)
+
+        # used for reudcing the number of frames
+        self.last_time = 0
+        self.rtf_multiplier = rtf_multiplier
 
     def build(self, states, time_stamps, ax):
         self.states = states
@@ -348,16 +387,19 @@ class OrientationPlotAnimated(AnimatedPlot):
         # cubesat_dipole[2], color='purple')
 
     def update(self):
+
         for state, time in zip(self.states, self.time_stamps):
-            points = []
-            for point in self.cubesat.points:
+            if time - self.last_time > self.rtf_multiplier:
+                points = []
+                for point in self.cubesat.points:
 
-                if self.draw_axes:
-                    self.update_axes(state)
+                    if self.draw_axes:
+                        self.update_axes(state)
 
-                if self.draw_magnetic_dipoles:
-                    self.update_magnetic_dipoles(state)
+                    if self.draw_magnetic_dipoles:
+                        self.update_magnetic_dipoles(state)
 
-                points.append(utils.quaternion_rotate(state.get_orientation_quaternion(), point))
-            self.ax.collections[0].set_verts(utils.points_to_verts(np.array(points)))
-            yield state, time
+                    points.append(utils.quaternion_rotate(state.get_orientation_quaternion(), point))
+                self.ax.collections[0].set_verts(utils.points_to_verts(np.array(points)))
+                yield state, time
+                self.last_time = time

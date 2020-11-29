@@ -13,7 +13,7 @@ import simple_space_simulator.state as state
 Step 1: Define the cubesat and planet specifications
 """
 # mass in kg, length, width, height in m
-qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(),
+qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(0.01, 5),
                           state_estimator=components.SimpleStateEstimator(),
                           length=0.2, width=0.2, height=0.4)
 
@@ -21,9 +21,9 @@ qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(),
 lsm9ds1 = components.SimpleIMU(position=(0, 0, 0), orientation=(0, 0, 0), id='imu', cubesat=qubesat)
 magnetorquer_x = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='mx',
                                                        cubesat=qubesat, number_of_loops=10, area=0.5)
-magnetorquer_y = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='my',
+magnetorquer_y = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 1.57), id='my',
                                                        cubesat=qubesat, number_of_loops=10, area=0.5)
-magnetorquer_z = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='mz',
+magnetorquer_z = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 1.57, 0), id='mz',
                                                        cubesat=qubesat, number_of_loops=10, area=0.5)
 
 qubesat.add_sensor(lsm9ds1)
@@ -42,7 +42,7 @@ Step 2: Configure the initial state of the cubesat in the simulation
 """
 inclination = constants.ISS_INCLINATION
 altitude = constants.ISS_ALTITUDE
-max_step_size = 0.1
+max_step_size = 1
 
 print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
 
@@ -51,7 +51,7 @@ v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(a
 # roll, pitch, yaw are defined referenced to ecef, droll, dpitch, dyaw are body rates
 # r, p, y and dr, dp, dyaw are converted to quaternion with the following two functions
 q_init = utils.euler_to_quaternion(0, 0, 0)
-dq_init = utils.angular_velocity_to_dquaternion([0.01, 0.0, 0.01], q_init)
+dq_init = utils.angular_velocity_to_dquaternion([0.001, 0.0, 0.0], q_init)
 
 initial_state = state.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
 simulator = physics.Simulator(qubesat, planet, initial_state, max_step_size)
@@ -91,7 +91,7 @@ plot6 = plots.OrbitalPlot3D(planet, show_magnetic_field=True, show_planet=True)
 r.add_plot(plot6)
 plot7 = plots.OrientationPlot()
 r.add_plot(plot7)
-plot8 = plots.AngularVelocityPlot()
+plot8 = plots.AngularVelocityPlot(qubesat)
 r.add_plot(plot8)
 plot9 = plots.MagneticFieldPlot(planet)
 r.add_plot(plot9)
@@ -104,5 +104,5 @@ r.render(figsize=(5, 7), columns=4)
 """
 Step 8: Run any animated plots
 """
-animated_plot1 = plots.OrientationPlotAnimated(qubesat)
-r.run_animated_plot(animated_plot1, 20.0, start_time=0, stop_time=500)
+animated_plot1 = plots.OrientationPlotAnimated(qubesat, rtf_multiplier=10)
+r.run_animated_plot(animated_plot1, 20.0, start_time=0, stop_time=r.time_stamps[-1])

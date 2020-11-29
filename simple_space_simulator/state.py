@@ -16,10 +16,10 @@ class State:
             "x y z must be int or float values"
         assert isinstance(dx, (int, float)) and isinstance(dy, (int, float)) and isinstance(dz, (int, float)), \
             "dx dy dz must be int or float values"
-        assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
-               isinstance(qy, (int, float)) and isinstance(qz, (int, float)) and \
-               np.linalg.norm(np.array([qw, qx, qy, qz])) - 1.0 < 0.1, \
-               "orientation quaternion must be composed of int and floats and have norm near one"
+        # assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
+        #        isinstance(qy, (int, float)) and isinstance(qz, (int, float)) and \
+        #        np.linalg.norm(np.array([qw, qx, qy, qz])) - 1.0 < 0.1, \
+        #        "orientation quaternion must be composed of int and floats and have norm near one"
         assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
                isinstance(qy, (int, float)) and isinstance(qz, (int, float)), \
                "orientation derivative must contain integers or floats"

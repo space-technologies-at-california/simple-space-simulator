@@ -124,6 +124,7 @@ class Cubesat:
 
         # Variables for analysis and rendering
         self.internal_state_history = []
+        self.control_history = []
 
     def __call__(self, time, external_state, external_linear_acc, external_angular_acc, external_magnetic_field):
         external_magnetic_field += self.get_static_magnetic_dipole()
@@ -136,18 +137,17 @@ class Cubesat:
 
         internal_state = self.state_estimator(time, sensor_readings)
         self.internal_state_history.append(internal_state)
-        control_commands = self.controller(time, internal_state, sensor_readings) or []
+        control_commands = self.controller(time, internal_state, sensor_readings)
 
         internal_acc, internal_angular_acc = np.zeros(3), np.zeros(3)
         magnetic_dipole = self.get_static_magnetic_dipole()
         for actuator in self.actuators:
-            id = actuator.id
-            for command in control_commands:
-                if command['id'] == id:
-                    actuator_force, actuator_torque, actuator_dipole = actuator.command(time, command)
-                    internal_acc += actuator_force / self.mass
-                    internal_angular_acc += np.dot(self.inertia_inv, actuator_torque)
-                    magnetic_dipole += actuator_dipole
+            if control_commands is not None and actuator.id in control_commands:
+                command = control_commands[actuator.id]
+                actuator_force, actuator_torque, actuator_dipole = actuator.command(time, command)
+                internal_acc += actuator_force / self.mass
+                internal_angular_acc += np.dot(self.inertia_inv, actuator_torque)
+                magnetic_dipole += actuator_dipole
 
         # incorporate torque due to magnetic field
         internal_angular_acc += np.dot(self.inertia_inv,
@@ -155,10 +155,16 @@ class Cubesat:
                                            external_state.get_orientation_quaternion(), magnetic_dipole),
                                         external_magnetic_field))
 
+        self.control_history.append({'linear acc': internal_acc,
+                                     'angular acc': internal_angular_acc,
+                                     'magnetic dipole': magnetic_dipole,
+                                     'actuator commands': control_commands})
+
         return internal_acc, internal_angular_acc
 
     def reset(self):
         self.internal_state_history = []
+        self.control_history = []
         self.controller.reset()
         self.state_estimator.reset()
         for actuator in self.actuators:

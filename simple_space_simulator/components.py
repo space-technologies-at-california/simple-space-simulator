@@ -11,31 +11,46 @@ class SimpleStateEstimator(cubesat.StateEstimator):
 
     def __call__(self, time, sensor_readings):
         # return internal state vector [ax, ay, az, wx, wy, wz, mx, my, mz, ...]
-        pass
+        internal_state = {'linear acceleration': sensor_readings['imu']['linear acceleration'],
+                          'angular velocity': sensor_readings['imu']['angular velocity'],
+                          'magnetic field': sensor_readings['imu']['magnetic field'],
+                          'orientation': sensor_readings['imu']['orientation']}
+        return internal_state
 
 
 class SimpleController(cubesat.Controller):
-    def __init__(self):
+    def __init__(self, gain, na):
         super().__init__()
+        self.k = gain
+        # Number of loops times the cross sectional area of the magnetorquer coil
+        self.na = na
 
     def __call__(self, time, internal_state, sensor_readings):
         # return controller command dictionary ex. {'m0': {'I': 10}, 'm1': {'I', 2}, ...}
-        pass
+        # B-dot implementation
+        b_dot = np.cross(internal_state['magnetic field'], internal_state['angular velocity'])
+        m_desired = - self.k / np.dot(internal_state['magnetic field'], internal_state['magnetic field']) * b_dot
+        i_desired = m_desired / self.na
+        Ix, Iy, Iz = i_desired
+
+        command = {'mx': {'I': Ix}, 'my': {'I': Iy}, 'mz': {'I': Iz}}
+        return command
 
 
 class SimpleIMU(cubesat.SensorDevice):
-    def __init__(self, position, orientation, id, cubesat):
+    def __init__(self, position, orientation, id, cubesat, noise=0.0):
         super().__init__(position, orientation, id, cubesat)
+        self.noise = noise
 
     def read(self, time, external_state, external_linear_acc, external_angular_acc, external_magnetic_field):
         # This model assumes that the IMU is at position (0, 0, 0) on the cubesat and has axis that align with those
         # of the cubesat
 
-        linear_acc = np.random.normal(external_linear_acc, 0.01)
+        linear_acc = np.random.normal(external_linear_acc, self.noise)
         magnetic_field = np.random.normal(utils.quaternion_rotate(
-            external_state.get_orientation_quaternion(), external_magnetic_field), 0.01)
+            external_state.get_orientation_quaternion(), external_magnetic_field), self.noise)
 
-        orientation = np.random.normal(external_state.get_orientation_quaternion(), 0.01)
+        orientation = np.random.normal(external_state.get_orientation_quaternion(), self.noise)
 
         return {'linear acceleration': linear_acc,
                 'magnetic field': magnetic_field,
@@ -54,8 +69,8 @@ class SimpleSolenoidMagnetorquer(cubesat.ControlDevice):
 
         self.R = transform.Rotation.from_euler('xyz', self.orientation)
 
-    def command(self, time, control_command):
+    def command(self, time, command):
         # Gets its I by looking at the control values
-        magnitude_m = self.cubesat.control_commands[self.id] * self.N * self.S
+        magnitude_m = command['I'] * self.N * self.S
         m = self.R.apply([1, 0, 0]) * magnitude_m
-        return m
+        return np.zeros(3), np.zeros(3), m
