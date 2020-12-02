@@ -7,7 +7,7 @@ import simple_space_simulator.physics as physics
 
 
 class State:
-    def __init__(self, x, y, z, dx, dy, dz, qw, qx, qy, qz, dqw, dqx, dqy, dqz):
+    def __init__(self, x, y, z, dx, dy, dz, qw, qx, qy, qz, p, q, r):
         """
         Structure of the external state vector (units are m, m/s, radians, radians/s)
         x, y, z, dx, dy, dz, roll, pitch, yaw, droll, dpitch, dyaw
@@ -24,7 +24,7 @@ class State:
                isinstance(qy, (int, float)) and isinstance(qz, (int, float)), \
                "orientation derivative must contain integers or floats"
 
-        self.state_vector = np.array([x, y, z, dx, dy, dz, qw, qx, qy, qz, dqw, dqx, dqy, dqz])
+        self.state_vector = np.array([x, y, z, dx, dy, dz, qw, qx, qy, qz, p, q, r])
 
     def get_cartesian_state_vector(self):
         """
@@ -50,14 +50,18 @@ class State:
         return utils.quaternion_conjugate(self.get_orientation_quaternion())
 
     def get_quaternion_derivative(self):
-        return self.state_vector[10:14]
+        p, q, r = self.get_angular_velocity_vector()
+        pqr_mat = np.array([[0, -p, -q, -r],
+                            [p, 0, r, -q],
+                            [q, -r, 0, p],
+                            [r, q, -p, 0]])
+        return 1/2 * np.dot(pqr_mat, self.get_orientation_quaternion())
 
     def get_velocity_vector(self):
         return self.state_vector[3:6]
 
     def get_angular_velocity_vector(self):
-        return utils.quaternion_multiply(self.get_orientation_quaternion_conjugate(),
-                                         2 * self.get_quaternion_derivative())[1:]
+        return self.state_vector[10:13]
 
     def get_spherical_state_vector(self):
         """
@@ -171,4 +175,4 @@ class State:
 
 def state_from_vector(v):
     # v is [x, y, z, dx, dy, dz, r, p y, wr, wp, wy]
-    return State(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12], v[13])
+    return State(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12])

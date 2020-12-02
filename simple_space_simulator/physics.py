@@ -55,11 +55,8 @@ class Simulator:
         # function that takes in a state and returns a torque vector <tx, ty, tz> acting around the COM of the
         # cubesat with inertia I
         self.torques = []
-        # function that takes in a state and returns an angular acceleration vector <alphax, alphay, alphaz> acting
-        # around the COM
-        self.angular_accelerations = []
 
-    def compute_lateral_accelerations(self, s):
+    def compute_external_force(self, s):
 
         net_force = np.zeros(3)
         for forcer in self.forces:
@@ -69,23 +66,17 @@ class Simulator:
         for accelerator in self.accelerations:
             net_acc += accelerator(s, self.cubesat, self.planet)
 
-        net_acc += net_force / self.cubesat.mass
+        net_force += net_acc * self.cubesat.mass
 
-        return net_acc
+        return net_force
 
-    def compute_angular_accelerations(self, s):
+    def compute_external_torque(self, s):
 
         net_torque = np.zeros(3)
         for torquer in self.torques:
             net_torque += torquer(s, self.cubesat, self.planet)
 
-        net_angular_acc = np.zeros(3)
-        for angular_accelerator in self.angular_accelerations:
-            net_angular_acc += angular_accelerator(s, self.cubesat, self.planet)
-
-        net_angular_acc += np.dot(self.cubesat.inertia_inv, net_torque)
-
-        return net_angular_acc
+        return net_torque
 
     def sample(self, t, y):
         """
@@ -100,28 +91,29 @@ class Simulator:
 
         external_state = state_from_vector(y)
 
-        # 1. Compute the external accelerations
-        external_acc = self.compute_lateral_accelerations(external_state)
-        external_angular_acc = self.compute_angular_accelerations(external_state)
+        # 1. Compute the external forces acting on the cubesat
+        external_force = self.compute_external_force(external_state)
+        external_torque = self.compute_external_torque(external_state)
 
-        # 2. Compute the internal / commanded accelerations
-        internal_acc, internal_angular_acc = self.cubesat(t, external_state, external_acc, external_angular_acc,
-                                                          self.planet.get_magnetic_field(external_state))
+        # 2. Compute the internal / commanded forces / torques
+        internal_force, internal_torque = self.cubesat(t, external_state, external_force, external_torque,
+                                                       self.planet.get_magnetic_field(external_state))
 
-        # 3. Sum external and internal accelerations
-        total_acc, total_angular_acc = external_acc + internal_acc, external_angular_acc + internal_angular_acc
+        # 3. Sum external and internal forces / torques
+        net_force, net_torque = external_force + internal_force, external_torque + internal_torque
 
-        # 4. Quaternion computations for integrating orientation
-        # see experimentation/dynamics_modeling.ipynb for resources on quaternions and integrating orientation
-        dquat = external_state.get_quaternion_derivative()
-        ddquat = 1 / 2 * (utils.quaternion_multiply(dquat, [0, *external_state.get_angular_velocity_vector()]) +
-                          utils.quaternion_multiply(external_state.get_orientation_quaternion(),
-                                                    [0, *total_angular_acc]))
+        # 4. Get the net acceleration
+        net_acc = net_force / self.cubesat.mass
+
+        # 5. Quaternion computations for integrating orientation and find the net angular acceleration in body frame
+        angular_velocity = external_state.get_angular_velocity_vector()
+        angular_momentum = np.dot(self.cubesat.inertia, angular_velocity)
+        angular_acc = np.dot(self.cubesat.inertia_inv, (net_torque - np.cross(angular_velocity, angular_momentum)))
 
         return (*external_state.get_velocity_vector(),
-                *total_acc,
-                *dquat,
-                *ddquat)
+                *net_acc,
+                *external_state.get_quaternion_derivative(),
+                *angular_acc)
 
     def run(self, start=0, stop=5000, sample_resolution=10):
         """
@@ -162,10 +154,6 @@ class Simulator:
     def add_torquer(self, torquer):
         assert callable(torquer), "torquer must be a function"
         self.torques.append(torquer)
-
-    def add_angular_accelerator(self, angular_accelerator):
-        assert callable(angular_accelerator), "angular_accelerator must be a function"
-        self.angular_accelerations.append(angular_accelerator)
 
 
 class Planet:

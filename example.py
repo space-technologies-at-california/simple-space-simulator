@@ -27,9 +27,9 @@ magnetorquer_z = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orien
                                                        cubesat=qubesat, number_of_loops=10, area=0.5)
 
 qubesat.add_sensor(lsm9ds1)
-qubesat.add_actuator(magnetorquer_x)
-qubesat.add_actuator(magnetorquer_y)
-qubesat.add_actuator(magnetorquer_z)
+# qubesat.add_actuator(magnetorquer_x)
+# qubesat.add_actuator(magnetorquer_y)
+# qubesat.add_actuator(magnetorquer_z)
 
 # dipole in tesla referenced from the cubesat frame
 qubesat.add_static_magnetic_dipole(np.array([0, 0, 0]))
@@ -42,18 +42,18 @@ Step 2: Configure the initial state of the cubesat in the simulation
 """
 inclination = constants.ISS_INCLINATION
 altitude = constants.ISS_ALTITUDE
-max_step_size = 1
+max_step_size = 100
 
 print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
 
 v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(altitude), inclination)
 
 # roll, pitch, yaw are defined referenced to ecef, droll, dpitch, dyaw are body rates
-# r, p, y and dr, dp, dyaw are converted to quaternion with the following two functions
+# r, p, y is converted to quaternion with the following functions. pqr are angular velocities
 q_init = utils.euler_to_quaternion(0, 0, 0)
-dq_init = utils.angular_velocity_to_dquaternion([0.001, 0.0, 0.0], q_init)
+pqr = [0.001, 0.0, 0.001]
 
-initial_state = state.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *dq_init)
+initial_state = state.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *pqr)
 simulator = physics.Simulator(qubesat, planet, initial_state, max_step_size)
 
 """

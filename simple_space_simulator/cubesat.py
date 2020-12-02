@@ -139,28 +139,27 @@ class Cubesat:
         self.internal_state_history.append(internal_state)
         control_commands = self.controller(time, internal_state, sensor_readings)
 
-        internal_acc, internal_angular_acc = np.zeros(3), np.zeros(3)
+        internal_force, internal_torque = np.zeros(3), np.zeros(3)
         magnetic_dipole = self.get_static_magnetic_dipole()
         for actuator in self.actuators:
             if control_commands is not None and actuator.id in control_commands:
                 command = control_commands[actuator.id]
                 actuator_force, actuator_torque, actuator_dipole = actuator.command(time, command)
-                internal_acc += actuator_force / self.mass
-                internal_angular_acc += np.dot(self.inertia_inv, actuator_torque)
+                internal_force += actuator_force
+                internal_torque += actuator_torque
                 magnetic_dipole += actuator_dipole
 
         # incorporate torque due to magnetic field
-        internal_angular_acc += np.dot(self.inertia_inv,
-                                       np.cross(utils.quaternion_rotate(
-                                           external_state.get_orientation_quaternion(), magnetic_dipole),
-                                        external_magnetic_field))
+        internal_torque += np.cross(utils.quaternion_rotate(external_state.get_orientation_quaternion(),
+                                                            magnetic_dipole),
+                                    external_magnetic_field)
 
-        self.control_history.append({'linear acc': internal_acc,
-                                     'angular acc': internal_angular_acc,
+        self.control_history.append({'force': internal_force,
+                                     'torque': internal_torque,
                                      'magnetic dipole': magnetic_dipole,
                                      'actuator commands': control_commands})
 
-        return internal_acc, internal_angular_acc
+        return internal_force, internal_torque
 
     def reset(self):
         self.internal_state_history = []
