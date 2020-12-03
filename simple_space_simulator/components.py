@@ -11,7 +11,8 @@ class SimpleStateEstimator(cubesat.StateEstimator):
 
     def __call__(self, time, sensor_readings):
         # return internal state vector [ax, ay, az, wx, wy, wz, mx, my, mz, ...]
-        internal_state = {'linear acceleration': sensor_readings['imu']['linear acceleration'],
+        internal_state = {'time': time,
+                          'linear acceleration': sensor_readings['imu']['linear acceleration'],
                           'angular velocity': sensor_readings['imu']['angular velocity'],
                           'magnetic field': sensor_readings['imu']['magnetic field'],
                           'orientation': sensor_readings['imu']['orientation']}
@@ -52,7 +53,8 @@ class SimpleIMU(cubesat.SensorDevice):
 
         orientation = np.random.normal(external_state.get_orientation_quaternion(), self.noise)
 
-        return {'linear acceleration': linear_acc,
+        return {'time': time,
+                'linear acceleration': linear_acc,
                 'magnetic field': magnetic_field,
                 'angular velocity': external_state.get_angular_velocity_vector(),
                 'orientation': orientation

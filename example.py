@@ -99,7 +99,7 @@ r.add_plot(plot9)
 """
 Step 7: Display all the plots
 """
-r.render(figsize=(5, 7), columns=4)
+# r.render(figsize=(5, 7), columns=4)
 
 """
 Step 8: Run any animated plots

@@ -161,7 +161,8 @@ class Cubesat:
         magnetic_dipole = utils.quaternion_rotate(external_state.get_orientation_quaternion(), magnetic_dipole)
         internal_torque += np.cross(magnetic_dipole, magnetic_field)
 
-        self.control_history.append({'force': internal_force,
+        self.control_history.append({'time': time,
+                                     'force': internal_force,
                                      'torque': internal_torque,
                                      'magnetic dipole': magnetic_dipole,
                                      'magnetic field': magnetic_field,

@@ -396,8 +396,12 @@ class OrientationPlotAnimated(AnimatedPlot):
 
     def update(self):
         print(len(self.states), len(self.time_stamps), len(self.cubesat.control_history))
-        for state, time, controls in zip(self.states, self.time_stamps, self.cubesat.control_history):
+        control_history_times = np.array([c['time'] for c in self.cubesat.control_history])
+        for state, time in zip(self.states, self.time_stamps):
             if time - self.last_time > self.rtf_multiplier:
+                # Hacky way to sink up control timesteps with state timesteps
+                control = self.cubesat.control_history[np.argmin(np.abs(control_history_times - time))]
+
                 points = []
                 for point in self.cubesat.points:
 
@@ -405,8 +409,8 @@ class OrientationPlotAnimated(AnimatedPlot):
                         self.update_axes(state)
 
                     if self.draw_magnetic_dipoles:
-                        self.update_magnetic_dipoles(state, controls["magnetic dipole"], controls["magnetic field"],
-                                                     controls['torque'])
+                        self.update_magnetic_dipoles(state, control["magnetic dipole"], control["magnetic field"],
+                                                     control['torque'])
 
                     points.append(utils.quaternion_rotate(state.get_orientation_quaternion(), point))
                 self.ax.collections[0].set_verts(utils.points_to_verts(np.array(points)))
