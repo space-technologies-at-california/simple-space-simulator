@@ -226,6 +226,7 @@ class AngularVelocityPlot(SimPlot):
     """
     This plot plots the orientation of the satellite itself
     """
+
     def __init__(self, cubesat):
         super().__init__()
         self.cubesat = cubesat
@@ -283,6 +284,7 @@ class MagneticFieldPlot(SimPlot):
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
 
+
 class MagneticFieldPlot(SimPlot):
     """
     This plot plots the strength of the x, y, and z components of the magnetic field in tesla
@@ -309,6 +311,7 @@ class MagneticFieldPlot(SimPlot):
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
 
+
 """
 Animated plots
 """
@@ -322,9 +325,10 @@ class AnimatedPlot(SimPlot, ABC):
 
 
 class OrientationPlotAnimated(AnimatedPlot):
-    def __init__(self, cubesat, rtf_multiplier=10, draw_axes=True, draw_magnetic_dipoles=True):
+    def __init__(self, cubesat, planet, rtf_multiplier=10, draw_axes=True, draw_magnetic_dipoles=True):
         super().__init__(is_3d=True)
         self.cubesat = cubesat
+        self.planet = planet
         self.draw_axes = draw_axes
         self.draw_magnetic_dipoles = draw_magnetic_dipoles
         self.collection = Poly3DCollection(
@@ -366,6 +370,9 @@ class OrientationPlotAnimated(AnimatedPlot):
 
         if self.draw_magnetic_dipoles:
             self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, 0, 0, 0, color='purple')
+            self.earth_magnetic_field = self.ax.quiver(0, 0, 0, 0, 0, 0, color='teal')
+            self.net_torque = self.ax.quiver(0, 0, 0, 0, 0, 0, color='black')
+
 
     def update_axes(self, state):
         self.x_quiver.remove()
@@ -378,17 +385,18 @@ class OrientationPlotAnimated(AnimatedPlot):
         self.y_quiver = self.ax.quiver(0, 0, 0, y[0], y[1], y[2], color='green')
         self.z_quiver = self.ax.quiver(0, 0, 0, z[0], z[1], z[2], color='blue')
 
-    def update_magnetic_dipoles(self, state):
-        # Needs to be re-implimented to deal with internal state history
-        pass
-        # self.cubesat_magnetic_dipole.remove()
-        # cubesat_dipole = self.cubesat.get_static_magnetic_dipole(state)
-        # self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, cubesat_dipole[0], cubesat_dipole[1],
-        # cubesat_dipole[2], color='purple')
+    def update_magnetic_dipoles(self, state, dipole, magnetic_field, control_torque):
+        self.cubesat_magnetic_dipole.remove()
+        self.earth_magnetic_field.remove()
+        self.net_torque.remove()
+        self.earth_magnetic_field = self.ax.quiver(0, 0, 0, *magnetic_field*1e4,
+                                                   color='teal')
+        self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, *dipole, color='purple')
+        self.net_torque = self.ax.quiver(0, 0, 0, *control_torque*1e4, color='black')
 
     def update(self):
-
-        for state, time in zip(self.states, self.time_stamps):
+        print(len(self.states), len(self.time_stamps), len(self.cubesat.control_history))
+        for state, time, controls in zip(self.states, self.time_stamps, self.cubesat.control_history):
             if time - self.last_time > self.rtf_multiplier:
                 points = []
                 for point in self.cubesat.points:
@@ -397,7 +405,8 @@ class OrientationPlotAnimated(AnimatedPlot):
                         self.update_axes(state)
 
                     if self.draw_magnetic_dipoles:
-                        self.update_magnetic_dipoles(state)
+                        self.update_magnetic_dipoles(state, controls["magnetic dipole"], controls["magnetic field"],
+                                                     controls['torque'])
 
                     points.append(utils.quaternion_rotate(state.get_orientation_quaternion(), point))
                 self.ax.collections[0].set_verts(utils.points_to_verts(np.array(points)))

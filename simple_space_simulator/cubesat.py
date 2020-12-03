@@ -126,19 +126,27 @@ class Cubesat:
         self.internal_state_history = []
         self.control_history = []
 
-    def __call__(self, time, external_state, external_linear_acc, external_angular_acc, external_magnetic_field):
-        external_magnetic_field += self.get_static_magnetic_dipole()
+    def __call__(self, time, external_state, external_force, external_torque, magnetic_field):
+
+        """
+        Perception Phase 
+        """
 
         sensor_readings = {}
         for sensor in self.sensors:
             id = sensor.id
+            # these readings currently are in acc not force/torque
             sensor_readings[id] = sensor.read(
-                time, external_state, external_linear_acc, external_angular_acc, external_magnetic_field)
+                time, external_state, external_force, external_torque, magnetic_field)
 
         internal_state = self.state_estimator(time, sensor_readings)
         self.internal_state_history.append(internal_state)
-        control_commands = self.controller(time, internal_state, sensor_readings)
 
+        """
+        Control Phase
+        """
+
+        control_commands = self.controller(time, internal_state, sensor_readings)
         internal_force, internal_torque = np.zeros(3), np.zeros(3)
         magnetic_dipole = self.get_static_magnetic_dipole()
         for actuator in self.actuators:
@@ -150,13 +158,13 @@ class Cubesat:
                 magnetic_dipole += actuator_dipole
 
         # incorporate torque due to magnetic field
-        internal_torque += np.cross(utils.quaternion_rotate(external_state.get_orientation_quaternion(),
-                                                            magnetic_dipole),
-                                    external_magnetic_field)
+        magnetic_dipole = utils.quaternion_rotate(external_state.get_orientation_quaternion(), magnetic_dipole)
+        internal_torque += np.cross(magnetic_dipole, magnetic_field)
 
         self.control_history.append({'force': internal_force,
                                      'torque': internal_torque,
                                      'magnetic dipole': magnetic_dipole,
+                                     'magnetic field': magnetic_field,
                                      'actuator commands': control_commands})
 
         return internal_force, internal_torque
@@ -185,6 +193,5 @@ class Cubesat:
     def get_static_magnetic_dipole(self):
         dipole_sum = np.array([0.0, 0.0, 0.0])
         for dipole in self.static_magnetic_dipoles:
-            # dipole_sum += utils.quaternion_rotate(s.get_orientation_quaternion(), dipole)
             dipole_sum += dipole
         return dipole_sum

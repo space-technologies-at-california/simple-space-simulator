@@ -135,8 +135,8 @@ class Simulator:
             self.initial_state.state_vector,
             t_eval=np.linspace(start, self.stop, (self.stop - self.start) * sample_resolution),
             max_step=self.max_step,
-            atol=1,
-            rtol=1)
+            atol=1e10,
+            rtol=1e10)
         print("\n---")
 
         # Convert state arrays into state objects for easier manipulation

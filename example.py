@@ -32,7 +32,7 @@ qubesat.add_sensor(lsm9ds1)
 # qubesat.add_actuator(magnetorquer_z)
 
 # dipole in tesla referenced from the cubesat frame
-qubesat.add_static_magnetic_dipole(np.array([0, 0, 0]))
+qubesat.add_static_magnetic_dipole(np.array([0.1, 0, 0]))
 
 # define planet specification
 planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, radius in meters
@@ -40,9 +40,9 @@ planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, rad
 """
 Step 2: Configure the initial state of the cubesat in the simulation
 """
-inclination = constants.ISS_INCLINATION
+inclination = 0
 altitude = constants.ISS_ALTITUDE
-max_step_size = 100
+max_step_size = 10
 
 print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
 
@@ -51,7 +51,7 @@ v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(a
 # roll, pitch, yaw are defined referenced to ecef, droll, dpitch, dyaw are body rates
 # r, p, y is converted to quaternion with the following functions. pqr are angular velocities
 q_init = utils.euler_to_quaternion(0, 0, 0)
-pqr = [0.001, 0.0, 0.001]
+pqr = [0.0, 0.0, 0.0]
 
 initial_state = state.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *pqr)
 simulator = physics.Simulator(qubesat, planet, initial_state, max_step_size)
@@ -104,5 +104,5 @@ r.render(figsize=(5, 7), columns=4)
 """
 Step 8: Run any animated plots
 """
-animated_plot1 = plots.OrientationPlotAnimated(qubesat, rtf_multiplier=10)
-r.run_animated_plot(animated_plot1, 20.0, start_time=0, stop_time=r.time_stamps[-1])
+animated_plot1 = plots.OrientationPlotAnimated(qubesat, planet, rtf_multiplier=20)
+r.run_animated_plot(animated_plot1, 10.0, start_time=0, stop_time=r.time_stamps[-1])
