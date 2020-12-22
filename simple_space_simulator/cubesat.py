@@ -129,7 +129,7 @@ class Cubesat:
     def __call__(self, time, external_state, external_force, external_torque, magnetic_field):
 
         """
-        Perception Phase 
+        Perception Phase
         """
 
         sensor_readings = {}
@@ -145,7 +145,6 @@ class Cubesat:
         """
         Control Phase
         """
-
         control_commands = self.controller(time, internal_state, sensor_readings)
         internal_force, internal_torque = np.zeros(3), np.zeros(3)
         magnetic_dipole = self.get_static_magnetic_dipole()
@@ -158,8 +157,8 @@ class Cubesat:
                 magnetic_dipole += actuator_dipole
 
         # incorporate torque due to magnetic field
-        magnetic_dipole = utils.quaternion_rotate(external_state.get_orientation_quaternion(), magnetic_dipole)
-        internal_torque += np.cross(magnetic_dipole, magnetic_field)
+        body_ref_magnetic_field = utils.quaternion_rotate(external_state.get_orientation_quaternion(), magnetic_field)
+        internal_torque += np.cross(magnetic_dipole, body_ref_magnetic_field)
 
         self.control_history.append({'time': time,
                                      'force': internal_force,

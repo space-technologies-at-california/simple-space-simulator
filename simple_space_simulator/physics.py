@@ -1,7 +1,6 @@
 import numpy as np
 import pyIGRF
 import scipy.integrate as integrate
-import simple_space_simulator.utils as utils
 import simple_space_simulator.cubesat as cube
 from simple_space_simulator.state import State, state_from_vector
 from simple_space_simulator import constants
@@ -98,6 +97,7 @@ class Simulator:
         # 2. Compute the internal / commanded forces / torques
         internal_force, internal_torque = self.cubesat(t, external_state, external_force, external_torque,
                                                        self.planet.get_magnetic_field(external_state))
+        internal_force = external_state.get_orientation().apply(internal_force, inverse=True)
 
         # 3. Sum external and internal forces / torques
         net_force, net_torque = external_force + internal_force, external_torque + internal_torque

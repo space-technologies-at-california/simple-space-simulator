@@ -37,7 +37,8 @@ class State:
         return self.state_vector[:3]
 
     def get_orientation(self):
-        return transform.Rotation.from_quat(self.get_orientation_quaternion())
+        w, x, y, z = self.get_orientation_quaternion()
+        return transform.Rotation.from_quat([x, y, z, w])
 
     def get_orientation_euler(self):
         quat = self.get_orientation_quaternion()

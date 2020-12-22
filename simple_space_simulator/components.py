@@ -20,21 +20,20 @@ class SimpleStateEstimator(cubesat.StateEstimator):
 
 
 class SimpleController(cubesat.Controller):
-    def __init__(self, gain, na):
+    def __init__(self, gain, na, max_current=0.5):
         super().__init__()
         self.k = gain
         # Number of loops times the cross sectional area of the magnetorquer coil
         self.na = na
+        self.max_current = max_current
 
     def __call__(self, time, internal_state, sensor_readings):
         # return controller command dictionary ex. {'m0': {'I': 10}, 'm1': {'I', 2}, ...}
         # B-dot implementation
-        b_dot = np.cross(internal_state['magnetic field'], internal_state['angular velocity'])
-        m_desired = - self.k / np.dot(internal_state['magnetic field'], internal_state['magnetic field']) * b_dot
-        i_desired = m_desired / self.na
-        Ix, Iy, Iz = i_desired
-
-        command = {'mx': {'I': Ix}, 'my': {'I': Iy}, 'mz': {'I': Iz}}
+        b_dot = np.cross(internal_state['angular velocity'], internal_state['magnetic field'])
+        m_desired = (self.k / np.linalg.norm(internal_state['magnetic field'])) * b_dot
+        ix, iy, iz = np.clip(m_desired / self.na, a_max=self.max_current, a_min=-self.max_current)
+        command = {'mx': {'I': ix}, 'my': {'I': iy}, 'mz': {'I': iz}}
         return command
 
 

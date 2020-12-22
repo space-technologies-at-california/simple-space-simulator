@@ -285,28 +285,32 @@ class MagneticFieldPlot(SimPlot):
         ax.legend(handles, labels)
 
 
-class MagneticFieldPlot(SimPlot):
+class MagnetorquerCurrentPlot(SimPlot):
     """
     This plot plots the strength of the x, y, and z components of the magnetic field in tesla
     """
 
-    def __init__(self, planet):
+    def __init__(self, cubesat):
         super().__init__()
-        self.planet = planet
+        self.cubesat = cubesat
 
     def build(self, states, time_stamps, ax):
-        x, y, z = [], [], []
-        for state in states:
-            field = self.planet.get_magnetic_field(state)
-            x.append(field[0])
-            y.append(field[1])
-            z.append(field[2])
-        ax.plot(time_stamps, x, color="red", label='x')
-        ax.plot(time_stamps, y, color="green", label='y')
-        ax.plot(time_stamps, z, color="blue", label='z')
-        ax.set_title("Magnetic Field Plot")
+        x, y, z, total = [], [], [], []
+        time_stamps = []
+        for state in self.cubesat.control_history:
+            time_stamps.append(state['time'])
+            x.append(state['actuator commands']['mx']['I'])
+            y.append(state['actuator commands']['my']['I'])
+            z.append(state['actuator commands']['mz']['I'])
+            total.append([x[-1] + y[-1] + z[-1]])
+
+        ax.plot(time_stamps, x, color="red", label='mx')
+        ax.plot(time_stamps, y, color="green", label='my')
+        ax.plot(time_stamps, z, color="blue", label='mz')
+        ax.plot(time_stamps, total, color="yellow", label='total')
+        ax.set_title("Magnetorquer Current Plot")
         ax.set_xlabel("time (s)")
-        ax.set_ylabel("field strength (T)")
+        ax.set_ylabel("Current (A)")
 
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
@@ -373,7 +377,6 @@ class OrientationPlotAnimated(AnimatedPlot):
             self.earth_magnetic_field = self.ax.quiver(0, 0, 0, 0, 0, 0, color='teal')
             self.net_torque = self.ax.quiver(0, 0, 0, 0, 0, 0, color='black')
 
-
     def update_axes(self, state):
         self.x_quiver.remove()
         self.y_quiver.remove()
@@ -389,13 +392,12 @@ class OrientationPlotAnimated(AnimatedPlot):
         self.cubesat_magnetic_dipole.remove()
         self.earth_magnetic_field.remove()
         self.net_torque.remove()
-        self.earth_magnetic_field = self.ax.quiver(0, 0, 0, *magnetic_field*1e4,
+        self.earth_magnetic_field = self.ax.quiver(0, 0, 0, *magnetic_field * 1e4,
                                                    color='teal')
         self.cubesat_magnetic_dipole = self.ax.quiver(0, 0, 0, *dipole, color='purple')
-        self.net_torque = self.ax.quiver(0, 0, 0, *control_torque*1e4, color='black')
+        self.net_torque = self.ax.quiver(0, 0, 0, *control_torque * 1e4, color='black')
 
     def update(self):
-        print(len(self.states), len(self.time_stamps), len(self.cubesat.control_history))
         control_history_times = np.array([c['time'] for c in self.cubesat.control_history])
         for state, time in zip(self.states, self.time_stamps):
             if time - self.last_time > self.rtf_multiplier:

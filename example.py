@@ -13,7 +13,7 @@ import simple_space_simulator.state as state
 Step 1: Define the cubesat and planet specifications
 """
 # mass in kg, length, width, height in m
-qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(0.01, 5),
+qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(gain=5e3, na=50),
                           state_estimator=components.SimpleStateEstimator(),
                           length=0.2, width=0.2, height=0.4)
 
@@ -21,18 +21,18 @@ qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(0.01, 5
 lsm9ds1 = components.SimpleIMU(position=(0, 0, 0), orientation=(0, 0, 0), id='imu', cubesat=qubesat)
 magnetorquer_x = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='mx',
                                                        cubesat=qubesat, number_of_loops=10, area=0.5)
-magnetorquer_y = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 1.57), id='my',
+magnetorquer_y = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, np.pi/2), id='my',
                                                        cubesat=qubesat, number_of_loops=10, area=0.5)
-magnetorquer_z = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 1.57, 0), id='mz',
+magnetorquer_z = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, -np.pi/2, 0), id='mz',
                                                        cubesat=qubesat, number_of_loops=10, area=0.5)
 
 qubesat.add_sensor(lsm9ds1)
-# qubesat.add_actuator(magnetorquer_x)
-# qubesat.add_actuator(magnetorquer_y)
-# qubesat.add_actuator(magnetorquer_z)
+qubesat.add_actuator(magnetorquer_x)
+qubesat.add_actuator(magnetorquer_y)
+qubesat.add_actuator(magnetorquer_z)
 
 # dipole in tesla referenced from the cubesat frame
-qubesat.add_static_magnetic_dipole(np.array([0.1, 0, 0]))
+qubesat.add_static_magnetic_dipole(np.array([0.0, 0, 0]))
 
 # define planet specification
 planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, radius in meters
@@ -40,7 +40,7 @@ planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, rad
 """
 Step 2: Configure the initial state of the cubesat in the simulation
 """
-inclination = 0
+inclination = constants.ISS_INCLINATION
 altitude = constants.ISS_ALTITUDE
 max_step_size = 10
 
@@ -51,9 +51,9 @@ v_init = utils.inclination_to_cartesian_velocity(utils.circular_orbit_velocity(a
 # roll, pitch, yaw are defined referenced to ecef, droll, dpitch, dyaw are body rates
 # r, p, y is converted to quaternion with the following functions. pqr are angular velocities
 q_init = utils.euler_to_quaternion(0, 0, 0)
-pqr = [0.0, 0.0, 0.0]
+pqr_init = [0.1, 0.1, 0.1]
 
-initial_state = state.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *pqr)
+initial_state = state.State(altitude + constants.R_EARTH, 0, 0, *v_init, *q_init, *pqr_init)
 simulator = physics.Simulator(qubesat, planet, initial_state, max_step_size)
 
 """
@@ -71,8 +71,9 @@ Step 4: Write the state estimation and control objects
 """
 Step 5: Configure the stop condition for the simulation. Run the simulation with the desired renderer
 """
+num_orbits = 3
 r = renderer.Renderer(resolution=1)
-r.run(simulator, stop_time=int(utils.orbital_period(altitude)))
+r.run(simulator, stop_time=int(num_orbits * utils.orbital_period(altitude)))
 
 """
 Step 6: Choose the plots you want to display after running the simulation
@@ -95,11 +96,13 @@ plot8 = plots.AngularVelocityPlot(qubesat)
 r.add_plot(plot8)
 plot9 = plots.MagneticFieldPlot(planet)
 r.add_plot(plot9)
+plot10 = plots.MagnetorquerCurrentPlot(qubesat)
+r.add_plot(plot10)
 
 """
 Step 7: Display all the plots
 """
-# r.render(figsize=(5, 7), columns=4)
+r.render(figsize=(5, 7), columns=4)
 
 """
 Step 8: Run any animated plots
