@@ -20,11 +20,11 @@ qubesat = cubesat.Cubesat(mass=1, controller=components.SimpleController(gain=5e
 # Define the components that will be added to the satellite
 lsm9ds1 = components.SimpleIMU(position=(0, 0, 0), orientation=(0, 0, 0), id='imu', cubesat=qubesat)
 magnetorquer_x = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, 0), id='mx',
-                                                       cubesat=qubesat, number_of_loops=10, area=0.5)
+                                                       number_of_loops=10, area=0.5)
 magnetorquer_y = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, 0, np.pi/2), id='my',
-                                                       cubesat=qubesat, number_of_loops=10, area=0.5)
+                                                       number_of_loops=10, area=0.5)
 magnetorquer_z = components.SimpleSolenoidMagnetorquer(position=(0, 0, 0), orientation=(0, -np.pi/2, 0), id='mz',
-                                                       cubesat=qubesat, number_of_loops=10, area=0.5)
+                                                       number_of_loops=10, area=0.5)
 
 qubesat.add_sensor(lsm9ds1)
 qubesat.add_actuator(magnetorquer_x)

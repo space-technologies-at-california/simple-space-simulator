@@ -30,14 +30,13 @@ class SensorDevice(ABC):
 class ControlDevice(ABC):
     ids = []
 
-    def __init__(self, position, orientation, id, cubesat):
+    def __init__(self, position, orientation, id):
         assert id not in ControlDevice.ids, "control device id must be unique"
         # position is x y z from center of cubesat
         # orientation is r p y in cubesate frame
         self.position = position
         self.orientation = orientation
         self.id = id
-        self.cubesat = cubesat
         ControlDevice.ids.append(self.id)
 
     @abstractmethod

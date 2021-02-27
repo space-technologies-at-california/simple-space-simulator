@@ -61,8 +61,8 @@ class SimpleIMU(cubesat.SensorDevice):
 
 
 class SimpleSolenoidMagnetorquer(cubesat.ControlDevice):
-    def __init__(self, position, orientation, id, cubesat, number_of_loops, area, mu=(4 * np.pi) * (10 ** -7)):
-        super().__init__(position, orientation, id, cubesat)
+    def __init__(self, position, orientation, id, number_of_loops, area, mu=(4 * np.pi) * (10 ** -7)):
+        super().__init__(position, orientation, id)
 
         self.N = number_of_loops  # Number of windings of the coil
         self.S = area

@@ -302,7 +302,7 @@ class MagnetorquerCurrentPlot(SimPlot):
             x.append(state['actuator commands']['mx']['I'])
             y.append(state['actuator commands']['my']['I'])
             z.append(state['actuator commands']['mz']['I'])
-            total.append([x[-1] + y[-1] + z[-1]])
+            total.append([abs(x[-1]) + abs(y[-1]) + abs(z[-1])])
 
         ax.plot(time_stamps, x, color="red", label='mx')
         ax.plot(time_stamps, y, color="green", label='my')

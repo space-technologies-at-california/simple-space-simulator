@@ -4,51 +4,53 @@ import scipy.spatial.transform as transform
 import simple_space_simulator.cubesat as cubesat
 
 
-class CubeSpaceRod(cubesat.ControlDevice):
-    def __init__(self, position, orientation, id, cubesat, number_of_loops, area, mu=(4 * np.pi) * (10 ** -7)):
-        super().__init__(position, orientation, id, cubesat)
+class CubeSpaceMagnetorquer(cubesat.ControlDevice):
+    def __init__(self, position, orientation, id, magnetic_gain, max_current, max_voltage, resistance):
+        super().__init__(position, orientation, id)
 
-        self.max_I =
+        self.magnetic_gain = magnetic_gain  # A*m^2/A
+
+        # Used to make sure that the supplied voltage is feasible
+        self.max_voltage = max_voltage
+        self.resistance = resistance
+
+        # maximum current as to the specification, this is for safety check
+        self.max_current = max_current
+
         self.R = transform.Rotation.from_euler('xyz', self.orientation)
 
+    def get_max_current(self):
+        return min(self.max_current, self.max_voltage / self.resistance)
+
     def command(self, time, command):
-        # Gets its I by looking at the control values
-        magnitude_m = command['I'] *
+        i_max = self.get_max_current()
+        if -i_max <= command['I'] <= i_max:
+            magnitude_m = command['I'] * self.magnetic_gain
+        else:
+            raise Exception(f"Magnetorquer over current! Current magnitude was {abs(command['I'])} "
+                            f"but should be less than {i_max}")
         m = self.R.apply([1, 0, 0]) * magnitude_m
         return np.zeros(3), np.zeros(3), m
 
 
-class CubeSpaceCoil(cubesat.ControlDevice):
-    def __init__(self, position, orientation, id, cubesat, number_of_loops, area, mu=(4 * np.pi) * (10 ** -7)):
-        super().__init__(position, orientation, id, cubesat)
-
-        self.N = number_of_loops  # Number of windings of the coil
-        self.S = area
-        self.mu = mu  # magnetic permeability of the core
-
-        self.R = transform.Rotation.from_euler('xyz', self.orientation)
-
-    def command(self, time, command):
-        # Gets its I by looking at the control values
-        magnitude_m = command['I'] * self.N * self.S
-        m = self.R.apply([1, 0, 0]) * magnitude_m
-        return np.zeros(3), np.zeros(3), m
+class CubeSpaceSmallRod(CubeSpaceMagnetorquer):
+    def __init__(self, position, orientation, id, max_voltage=5):
+        super().__init__(position, orientation, id, 2.8, 150e-3, max_voltage, 31)
 
 
-class CubeSpaceSmallRod(CubeSpaceRod):
-    pass
+class CubeSpaceMediumRod(CubeSpaceMagnetorquer):
+    def __init__(self, position, orientation, id, max_voltage=5):
+        super().__init__(position, orientation, id, 8.2, 150e-3, max_voltage, 65)
 
 
-class CubeSpaceMediumRod(CubeSpaceRod):
-    pass
+class CubeSpaceLargeRod(CubeSpaceMagnetorquer):
+    def __init__(self, position, orientation, id, max_voltage=5):
+        super().__init__(position, orientation, id, 25, 150e-3, max_voltage, 66)
 
 
-class CubeSpaceLargeRod(CubeSpaceRod):
-    pass
-
-
-class CubeSpaceDoubleCoil(CubeSpaceCoil):
-    pass
+class CubeSpaceCoil(CubeSpaceMagnetorquer):
+    def __init__(self, position, orientation, id, max_voltage=5):
+        super().__init__(position, orientation, id, 2.1, 150e-3, max_voltage, 83)
 
 
 class ScheduledController(cubesat.Controller):
@@ -62,18 +64,17 @@ class ScheduledController(cubesat.Controller):
     angular velocity and back down
     """
 
-    def __init__(self, gain, na, max_current=0.5):
+    def __init__(self, gains, max_currents, magnetic_gains):
         super().__init__()
-        self.k = gain
-        # Number of loops times the cross sectional area of the magnetorquer coil
-        self.na = na
-        self.max_current = max_current
+        self.k = gains
+        self.max_currents = max_currents
+        self.magnetic_gains = magnetic_gains
 
     def __call__(self, time, internal_state, sensor_readings):
         # return controller command dictionary ex. {'m0': {'I': 10}, 'm1': {'I', 2}, ...}
         # B-dot implementation
         b_dot = np.cross(internal_state['angular velocity'], internal_state['magnetic field'])
         m_desired = (self.k / np.linalg.norm(internal_state['magnetic field'])) * b_dot
-        ix, iy, iz = np.clip(m_desired / self.na, a_max=self.max_current, a_min=-self.max_current)
+        ix, iy, iz = np.clip(m_desired / self.magnetic_gains, a_max=self.max_currents, a_min=-self.max_currents)
         command = {'mx': {'I': ix}, 'my': {'I': iy}, 'mz': {'I': iz}}
         return command
