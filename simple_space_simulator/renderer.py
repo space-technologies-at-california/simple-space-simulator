@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import simple_space_simulator.constants as constants
 import simple_space_simulator.physics as physics
+from simple_space_simulator.state import State
 import time
+import numpy as np
 
 
 class Renderer:
@@ -28,6 +30,17 @@ class Renderer:
                                     constants.SECONDS_PER_HOUR // constants.SECONDS_PER_MINUTE,
                                     elapsed_time % constants.SECONDS_PER_DAY %
                                     constants.SECONDS_PER_HOUR % constants.SECONDS_PER_MINUTE))
+
+    def save(self, filename=f"{time.time()}.npy"):
+        with open(filename, 'wb') as file:
+            arr = np.array([self.time_stamps, [s.state_vector for s in self.states]], dtype=object)
+            np.save(file, arr)
+
+    def load(self, filename):
+        with open(filename, 'rb') as file:
+            arr = np.load(file, allow_pickle=True)
+            self.time_stamps = arr[0]
+            self.states = [State.state_from_vector(s) for s in arr[1]]
 
     def add_plot(self, plot):
         self.plots.append(plot)

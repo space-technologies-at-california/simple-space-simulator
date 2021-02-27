@@ -2,7 +2,7 @@ import numpy as np
 import pyIGRF
 import scipy.integrate as integrate
 import simple_space_simulator.cubesat as cube
-from simple_space_simulator.state import State, state_from_vector
+from simple_space_simulator.state import State
 from simple_space_simulator import constants
 
 
@@ -88,7 +88,7 @@ class Simulator:
         if t - self.last_t > 10:
             print("\rSimulation progress: {:.2f}%".format(t / (self.stop - self.start) * 100), end="")
 
-        external_state = state_from_vector(y)
+        external_state = State.state_from_vector(y)
 
         # 1. Compute the external forces acting on the cubesat
         external_force = self.compute_external_force(external_state)
@@ -140,7 +140,7 @@ class Simulator:
         print("\n---")
 
         # Convert state arrays into state objects for easier manipulation
-        states = [state_from_vector(y) for y in sol.y.T]
+        states = [State.state_from_vector(y) for y in sol.y.T]
         return sol.t, states
 
     def add_forcer(self, forcer):

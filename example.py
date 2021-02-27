@@ -42,7 +42,7 @@ Step 2: Configure the initial state of the cubesat in the simulation
 """
 inclination = constants.ISS_INCLINATION
 altitude = constants.ISS_ALTITUDE
-max_step_size = 10
+max_step_size = 100
 
 print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
 
@@ -109,3 +109,10 @@ Step 8: Run any animated plots
 """
 animated_plot1 = plots.OrientationPlotAnimated(qubesat, planet, rtf_multiplier=20)
 r.run_animated_plot(animated_plot1, 10.0, start_time=0, stop_time=r.time_stamps[-1])
+
+"""
+Step 9: Save the data
+"""
+r.save('example.npy')
+# r.load('example.npy')
+# r.render(figsize=(5, 7), columns=4)

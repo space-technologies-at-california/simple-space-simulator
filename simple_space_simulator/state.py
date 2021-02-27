@@ -16,13 +16,9 @@ class State:
             "x y z must be int or float values"
         assert isinstance(dx, (int, float)) and isinstance(dy, (int, float)) and isinstance(dz, (int, float)), \
             "dx dy dz must be int or float values"
-        # assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
-        #        isinstance(qy, (int, float)) and isinstance(qz, (int, float)) and \
-        #        np.linalg.norm(np.array([qw, qx, qy, qz])) - 1.0 < 0.1, \
-        #        "orientation quaternion must be composed of int and floats and have norm near one"
         assert isinstance(qw, (int, float)) and isinstance(qx, (int, float)) and \
-               isinstance(qy, (int, float)) and isinstance(qz, (int, float)), \
-               "orientation derivative must contain integers or floats"
+            isinstance(qy, (int, float)) and isinstance(qz, (int, float)), \
+            "orientation derivative must contain integers or floats"
 
         self.state_vector = np.array([x, y, z, dx, dy, dz, qw, qx, qy, qz, p, q, r])
 
@@ -56,7 +52,7 @@ class State:
                             [p, 0, r, -q],
                             [q, -r, 0, p],
                             [r, q, -p, 0]])
-        return 1/2 * np.dot(pqr_mat, self.get_orientation_quaternion())
+        return 1 / 2 * np.dot(pqr_mat, self.get_orientation_quaternion())
 
     def get_velocity_vector(self):
         return self.state_vector[3:6]
@@ -173,7 +169,15 @@ class State:
     def __str__(self):
         return str(self.state_vector)
 
+    def __dict__(self):
+        q = self.get_orientation_quaternion()
+        w = self.get_angular_velocity_vector()
+        return {'x': self.get_x(), 'y': self.get_y(), 'z': self.get_z(),
+                'dx': self.get_dx(), 'dy': self.get_dy(), 'dz': self.get_dz(),
+                'qw': q[0], 'qx': q[1], 'qy': q[2], 'qz': q[3],
+                'p': w[0], 'q': w[1], 'r': w[2]}
 
-def state_from_vector(v):
-    # v is [x, y, z, dx, dy, dz, r, p y, wr, wp, wy]
-    return State(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12])
+    @classmethod
+    def state_from_vector(cls, v):
+        # v is [x, y, z, dx, dy, dz, r, p y, wr, wp, wy]
+        return State(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12])
