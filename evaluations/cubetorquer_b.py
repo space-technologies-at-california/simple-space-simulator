@@ -15,8 +15,7 @@ import simple_space_simulator.utils as utils
 import simple_space_simulator.components as components
 import simple_space_simulator.state as state
 
-from evaluations.models import CubeSpaceSmallRod, CubeSpaceMediumRod, CubeSpaceLargeRod, CubeSpaceCoil, \
-    ScheduledController
+from evaluations.models import CubeSpaceSmallRod, ScheduledController
 
 
 # helpful ballpark k calculator to prevent too much railing, make sure to still tune for power consumption
@@ -51,9 +50,12 @@ controller = ScheduledController(gains=np.array([4.2, 4.2, 4.2]),
                                  max_currents=max_currents)
 
 # mass in kg, length, width, height in m
-qubesat = cubesat.Cubesat(mass=1, controller=controller,
+inertia = np.array([[0.0083333, 0, 0],
+                    [0, 0.0083333, 0],
+                    [0, 0, 0.0033333]])
+qubesat = cubesat.Cubesat(mass=2, controller=controller, inertia=inertia,
                           state_estimator=components.SimpleStateEstimator(),
-                          length=0.2, width=0.2, height=0.4)
+                          length=0.1, width=0.1, height=0.2)
 
 # Define the components that will be added to the satellite
 lsm9ds1 = components.SimpleIMU(position=(0, 0, 0), orientation=(0, 0, 0), id='imu', cubesat=qubesat)
@@ -74,7 +76,7 @@ Step 2: Configure the initial state of the cubesat in the simulation
 """
 inclination = constants.ISS_INCLINATION
 altitude = constants.ISS_ALTITUDE
-max_step_size = 100
+max_step_size = 1
 
 print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
 
@@ -102,7 +104,7 @@ Step 4: Write the state estimation and control objects
 """
 Step 5: Configure the stop condition for the simulation. Run the simulation with the desired renderer
 """
-num_orbits = 15
+num_orbits = 0.5
 r = renderer.Renderer(resolution=1)
 r.run(simulator, stop_time=int(num_orbits * utils.orbital_period(altitude)))
 
@@ -138,8 +140,8 @@ r.render(figsize=(20, 7), columns=2)
 """
 Step 8: Run any animated plots
 """
-# animated_plot1 = plots.OrientationPlotAnimated(qubesat, planet, rtf_multiplier=20)
-# r.run_animated_plot(animated_plot1, 10.0, start_time=0, stop_time=r.time_stamps[-1])
+animated_plot1 = plots.OrientationPlotAnimated(qubesat, planet, rtf_multiplier=20)
+r.run_animated_plot(animated_plot1, 10.0, start_time=0, stop_time=r.time_stamps[-1])
 
 """
 Step 9: Save the data
