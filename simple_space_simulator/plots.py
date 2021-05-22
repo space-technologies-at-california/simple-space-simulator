@@ -5,6 +5,7 @@ import numpy as np
 import math
 from abc import ABC, abstractmethod
 
+from simple_space_simulator.physics import Planet
 import simple_space_simulator.utils as utils
 
 
@@ -152,6 +153,13 @@ class OrbitalPlot3D(SimPlot):
                 magnetic_field_vector_norm *= 4e6  # this makes the vectors visible
                 ax.quiver(state.get_x(), state.get_y(), state.get_z(), magnetic_field_vector_norm[0],
                           magnetic_field_vector_norm[1], magnetic_field_vector_norm[2], color='green')
+
+        # starting point
+        xyz = states[0].get_ecef_position()
+        ax.scatter(*xyz, color="blue")
+
+        # Base Station
+        ax.scatter(2087632.00774586, -3307713.96450789, 5028962.31137543, color="red")
 
         ax.set_title("Orbital Plot 3D")
         ax.set_xlabel("x")
@@ -314,6 +322,56 @@ class MagnetorquerCurrentPlot(SimPlot):
 
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
+
+
+class BaseStationAnglePlot(SimPlot):
+    """
+    This plot plots the angle between the satellite and the base station
+    """
+
+    def __init__(self, planet: Planet, lat, long):
+        super().__init__()
+        self.planet = planet
+        self.baseStationLocationECEF = self.planet.lat_long_to_cartesian(lat, long)
+        self.lat = np.deg2rad(lat)
+        self.long = np.deg2rad(long)
+
+    def build(self, states, time_stamps, ax):
+        angles = []
+        for state, time in zip(states, time_stamps):
+            # compute transformation so we can get the position of satellite relative to base station
+            # see https://en.wikipedia.org/wiki/Local_tangent_plane_coordinates
+            l = self.long
+            p = self.lat + self.planet.rotationRate * time  # This is JANK need to come up with a better way to handle
+            self.R = np.array([[-np.sin(p) * np.cos(p), -np.sin(p), -np.cos(p) * np.cos(l)],
+                               [-np.sin(p) * np.sin(l), np.cos(l), -np.cos(l) * np.sin(p)],
+                               [np.cos(p), 0, -np.sin(p)]])
+
+            p = state.get_ecef_position()
+            pNED = self.R.T @ (p - self.baseStationLocationECEF)
+
+            # get the angle between this vector and pNED
+            v = np.array([0, 0, -1])
+            a = np.arccos(v @ pNED / np.linalg.norm(pNED))
+            angles.append(np.rad2deg(a))
+
+        ax.plot(time_stamps, angles, color="red", label='deg')
+
+        passAngle = 60 # degrees from the vector perpendicular to the earths surface @ the base station location
+        ax.plot(time_stamps, [passAngle for _ in angles], color="blue", label='deg')
+        ax.set_title("Base Station Angle Plot")
+        ax.set_xlabel("time (s)")
+        ax.set_ylabel("angle (deg)")
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels)
+
+        # kick out a few stats
+        inRange = 0
+        for a in angles:
+            if a < passAngle:
+                inRange += 1
+        print("\nPercent of time in range of base station:", inRange / len(angles) * 100)
 
 
 """

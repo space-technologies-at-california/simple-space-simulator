@@ -157,12 +157,21 @@ class Simulator:
 
 
 class Planet:
-    def __init__(self, mass, radius, magnetic_field_model=pyIGRF):
+    def __init__(self, mass, radius, rotationRate, magnetic_field_model=pyIGRF):
         assert isinstance(mass, (int, float)) and mass > 0, "mass must be a positive value"
         assert isinstance(radius, (int, float)) and radius > 0, "radius must be a positive value"
         self.radius = radius  # m
         self.mass = mass  # kg
         self.magnetic_field_model = magnetic_field_model
+        self.rotationRate = rotationRate
+
+    def lat_long_to_cartesian(self, latitude, longitude):
+        theta = np.deg2rad(latitude)
+        phi = np.deg2rad(longitude)
+        x = self.radius * np.cos(phi) * np.sin(theta)
+        y = self.radius * np.sin(phi) * np.sin(theta)
+        z = self.radius * np.cos(theta)
+        return np.array([x, y, z])
 
     def get_gravitational_acceleration(self, state):
         assert isinstance(state, State), "state must be a State object"

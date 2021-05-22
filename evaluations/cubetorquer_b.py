@@ -45,7 +45,7 @@ print(f'Suggested maximum bdot gains:\n'
       f'y: {bdot_gain_calculator(magnetorquer_y.magnetic_gain, magnetorquer_y.get_max_current(), max_angular_vel)}\n'
       f'z: {bdot_gain_calculator(magnetorquer_z.magnetic_gain, magnetorquer_z.get_max_current(), max_angular_vel)}\n')
 
-controller = ScheduledController(gains=np.array([4.2, 4.2, 4.2]),
+controller = ScheduledController(gains=np.array([1, 1, 1]),
                                  magnetic_gains=magnetic_gains,
                                  max_currents=max_currents)
 

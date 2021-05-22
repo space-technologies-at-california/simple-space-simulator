@@ -68,13 +68,14 @@ qubesat.add_actuator(magnetorquer_z)
 qubesat.add_static_magnetic_dipole(np.array([0.0, 0, 0]))
 
 # define planet specification
-planet = physics.Planet(constants.M_EARTH, constants.R_EARTH)  # mass in kg, radius in meters
+# mass in kg, radius in meters, rotation rate in rad/s
+planet = physics.Planet(constants.M_EARTH, constants.R_EARTH, constants.ROTATION_RATE_EARTH)
 
 """
 Step 2: Configure the initial state of the cubesat in the simulation
 """
-inclination = constants.ISS_INCLINATION
-altitude = constants.ISS_ALTITUDE
+inclination = np.deg2rad(41)
+altitude = 5e5
 max_step_size = 100
 
 print("Starting inclination:", str(np.degrees(inclination)) + "deg", "\nStarting altitude:", str(altitude) + "m", '\n')
@@ -103,9 +104,10 @@ Step 4: Write the state estimation and control objects
 """
 Step 5: Configure the stop condition for the simulation. Run the simulation with the desired renderer
 """
-num_orbits = 15
+num_orbits = 200
 r = renderer.Renderer(resolution=1)
 r.run(simulator, stop_time=int(num_orbits * utils.orbital_period(altitude)))
+# r.load('cubetorquer_a.npy')
 
 """
 Step 6: Choose the plots you want to display after running the simulation
@@ -120,16 +122,18 @@ Step 6: Choose the plots you want to display after running the simulation
 # r.add_plot(plot4)
 # plot5 = plots.OrbitalPlot2D(planet, inclination=inclination)
 # r.add_plot(plot5)
-# plot6 = plots.OrbitalPlot3D(planet, show_magnetic_field=True, show_planet=True)
-# r.add_plot(plot6)
+plot6 = plots.OrbitalPlot3D(planet, show_magnetic_field=False, show_planet=True)
+r.add_plot(plot6)
 # plot7 = plots.OrientationPlot()
 # r.add_plot(plot7)
-plot8 = plots.AngularVelocityPlot(qubesat)
-r.add_plot(plot8)
+# plot8 = plots.AngularVelocityPlot(qubesat)
+# r.add_plot(plot8)
 # plot9 = plots.MagneticFieldPlot(planet)
 # r.add_plot(plot9)
-plot10 = plots.MagnetorquerCurrentPlot(qubesat)
-r.add_plot(plot10)
+# plot10 = plots.MagnetorquerCurrentPlot(qubesat)
+# r.add_plot(plot10)
+plot11 = plots.BaseStationAnglePlot(planet, 37.8749934, -122.2576799)
+r.add_plot(plot11)
 
 """
 Step 7: Display all the plots
